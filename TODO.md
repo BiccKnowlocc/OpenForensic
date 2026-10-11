@@ -1,36 +1,37 @@
 # OpenForensic tasks
 
-Planning checklist for a local examiner workstation. Nothing here is started until the box is checked.
-
 ## Boundaries
 
-- Acquisition only after the phone user has authorized USB debugging, or the phone is already rooted and in the operator's control.
-- No exploit root, no lock-screen/FBE bypass, no covert implant.
-- Deleted data means SQLite freelist/WAL (and unallocated carving only on an image already acquired under that model). A full dump of every deleted byte from a locked encrypted phone is out of scope.
-- Evidence stays in local SQLite (FTS5). No MongoDB unless the user later overrides.
+- Acquisition only after the phone user has authorized USB debugging. The v1 test phone is not rooted.
+- No exploit root, no lock-screen or encryption bypass, and no covert implant.
+- Deleted-message carving stays out of v1. A free-space wipe can overwrite deleted files the shell can already write on shared storage. It is a separate confirmed action, not part of extraction.
+- The examiner machine keeps the case folder, hashes, manifest, audit log, and `case_store.db`. The web viewer and review read MongoDB Atlas when `MONGODB_URI` is set.
 
 ## Now
 
 - [x] Save this task list
 - [x] Create a public GitHub repo named OpenForensic
-- [ ] Confirm Netlify is docs-only later
-- [ ] Keep the case database local
+- [x] Web case viewer is in v1 and is the Netlify site
+- [x] Viewer and review read Atlas project OpenForensic, cluster OpenForensic, database OpenForensic, when the host has `MONGODB_URI`
 
 ## v1
 
-- [ ] Electron + React + Vite + Tailwind scaffold
-- [ ] Directories `src/main`, `src/renderer`, `src/engine`, `src/db`
-- [ ] adb device detect and fingerprint (`getprop`, root check, SELinux)
-- [ ] Heartbeat for USB disconnect
-- [ ] Streaming MD5 and SHA-256 Transform while writing to disk
-- [ ] Logical extract of SMS, call log, contacts, and shared media (`/sdcard/DCIM`, `Download`, `Recordings`) via authorized adb content queries
-- [ ] `evidence_manifest.json` (device ids, timestamps, operator, source paths, hashes)
-- [ ] Immutable JSON audit log
-- [ ] Case folder create, open, and archive
-- [ ] `case_store.db` with normalized message fields (`timestamp_utc`, `platform`, `sender_id`, `receiver_id`, `message_text`, `media_path`, `is_deleted_flag`) and FTS5
-- [ ] Live extraction monitor
-- [ ] Timeline
-- [ ] Chat thread viewer
+- [x] Electron + React + Vite + Tailwind scaffold
+- [x] Directories `src/main`, `src/renderer`, `src/engine`, `src/db`
+- [x] adb device detect and fingerprint (`getprop`, root check via `id`, SELinux)
+- [x] Heartbeat for USB disconnect
+- [x] Streaming MD5 and SHA-256 Transform while writing to disk
+- [x] Logical extract of SMS, call log, contacts, and shared media (`/sdcard/DCIM`, `Download`, `Recordings`) via authorized adb content queries
+- [x] `evidence_manifest.json` (device ids, timestamps, operator, source paths, hashes)
+- [x] Immutable JSON audit log
+- [x] Case folder create, open, and archive
+- [x] `case_store.db` with normalized message fields (`timestamp_utc`, `platform`, `sender_id`, `receiver_id`, `message_text`, `media_path`, `is_deleted_flag`) and FTS5
+- [x] Live extraction monitor
+- [x] Timeline
+- [x] Chat thread viewer
+- [x] Harbor Street sample case for the viewer, timeline, chat, and review with no phone attached
+- [x] Review on records already in the case: ask, summarize a thread, explain the timeline, draft a short report. Netlify AI Gateway model `gpt-4o-mini`, with a labeled local fallback
+- [x] Free-space wipe for an authorized Android phone or tablet: junk files only in `/sdcard/OpenForensic/free-space-wipe`, stop with about 128 MB free, confirmation required, remove-files action, stop on USB loss, permission denial, or encrypted storage
 
 ## Later
 

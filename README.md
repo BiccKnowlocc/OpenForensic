@@ -1,31 +1,56 @@
 # OpenForensic
 
-Local examiner workstation for authorized Android acquisition. The phone user has authorized USB debugging, or the phone is already rooted and in the operator's control.
+Examiner workstation for an authorized Android logical acquisition, plus a web case viewer. The phone or tablet user has turned on USB debugging and accepted the prompt. The test device is not rooted.
 
-OpenForensic does not exploit a device, bypass a lock screen or file-based encryption, or install a hidden agent. Deleted-message work is limited to SQLite freelist and WAL data on an image already acquired under that model.
+OpenForensic does not exploit a device, bypass a lock screen or encryption, or install a hidden agent. v1 reads SMS, call log, contacts, and shared media. A separate, confirmed action can fill free space on shared storage with junk files. It does not image block devices.
 
-This repository currently holds the task list and the architecture. The Electron app is not scaffolded yet.
+## v1 layout
 
-## Planned stack
+- Desktop app: Electron, React, Vite, and Tailwind in `src/main`, `src/renderer`, `src/engine`, and `src/db`.
+- Web viewer: `web/`, deployed for Netlify. Dev server binds `0.0.0.0:41773`.
+- Sample case: Harbor Street, labeled sample, so timeline, chat, and review work with no phone.
+- Local case folder: streaming MD5 and SHA-256, `evidence_manifest.json`, append-only `audit.jsonl`, and `case_store.db` (SQLite FTS5).
+- Atlas project and cluster name OpenForensic, database `OpenForensic`. The connection string lives only in the host environment. See `.env.example`.
 
-- Electron, React, Tailwind, and Vite
-- Node `adbkit` and `child_process` streams for authorized adb
-- Node `crypto` Transform hashes (MD5 and SHA-256) while files are written
-- Python 3 parsers
-- Local SQLite with FTS5 (`case_store.db` on the examiner machine)
+## Run the web viewer
 
-## How it will run
+```bash
+npm install
+npm run dev:web
+```
 
-Acquisition runs on the examiner's computer, not on Netlify.
+Open http://127.0.0.1:41773/ and open the Harbor Street sample.
 
-1. Install Node.js, Python 3, and Android platform-tools so `adb` is on `PATH`.
-2. Install dependencies and start the app once the v1 scaffold exists: `npm install`, then `npm run dev`.
-3. Connect a phone whose user has authorized USB debugging, or a phone that is already rooted and in your control.
-4. Create or open a case folder. Raw extracts, `evidence_manifest.json`, the audit log, and `case_store.db` stay on this machine.
+## Run the desktop app
 
-See [TODO.md](TODO.md) for the checklist and [ARCHITECTURE.md](ARCHITECTURE.md) for the pipeline.
+Install Node.js 22 and Android platform-tools so `adb` is on `PATH`.
 
-## What stays off this machine's cloud accounts
+```bash
+npm install
+npm run dev
+```
 
-- Netlify, if used later, hosts a docs or landing page only. It cannot run USB acquisition.
-- The case database is local SQLite. MongoDB is not part of the design unless that choice is explicitly changed later.
+Create a case, connect a phone whose user authorized USB debugging, then start a logical extraction. Hashes are computed while files are written. USB disconnect, permission denial, and encrypted storage stop the read and append an error to the audit log.
+
+## Free-space wipe
+
+From a real case in the desktop app, Monitor → Fill free space. Type `WIPE`. The app writes junk files only to `/sdcard/OpenForensic/free-space-wipe` until about 128 MB remains free, then you can remove those files. It stops if the USB device disappears, the shell is denied, or the storage is encrypted. It does not unlock the phone.
+
+## Review
+
+Ask about the open case, summarize a thread, explain the timeline, or draft a short report. The deployed viewer calls the Netlify AI Gateway with `gpt-4o-mini`. If the gateway is not reachable, the app uses a labeled local review of the same case records.
+
+## Netlify
+
+Build command `npm run build:web`, publish directory `web/dist`, Node 22. Set `MONGODB_URI` in the site environment. Do not set `OPENAI_API_KEY`. Enable AI features so the gateway can inject its own endpoint.
+
+```bash
+npx netlify login
+npx netlify link --git-remote-url https://github.com/BiccKnowlocc/OpenForensic
+```
+
+## Tests
+
+```bash
+npm test
+```
