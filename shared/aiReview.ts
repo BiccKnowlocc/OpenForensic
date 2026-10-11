@@ -13,7 +13,7 @@ export function localReview(request: ReviewRequest, bundle: CaseBundle): ReviewR
     text,
     provider: "local-fallback",
     model: null,
-    label: "Local review \u2014 Netlify AI Gateway unreachable. Answers use only records already in this case.",
+    label: "Local review — Netlify AI Gateway unreachable. Answers use only records already in this case.",
   };
 }
 
@@ -39,7 +39,7 @@ function ask(bundle: CaseBundle, question: string): string {
   const lines = ["From the records already in this case:"];
   for (const message of messages.slice(0, 4)) {
     lines.push(
-      `- ${formatUtc(message.timestampUtc)} SMS, ${partyName(bundle, message.senderId)} to ${partyName(bundle, message.receiverId)}: \"${message.messageText}\"${message.isDeletedFlag ? " (deleted flag)" : ""}`,
+      `- ${formatUtc(message.timestampUtc)} SMS, ${partyName(bundle, message.senderId)} to ${partyName(bundle, message.receiverId)}: "${message.messageText}"${message.isDeletedFlag ? " (deleted flag)" : ""}`,
     );
   }
   for (const call of calls.slice(0, 3)) {
@@ -72,7 +72,7 @@ function summarizeThread(bundle: CaseBundle, threadId: string | undefined): stri
     "What the messages say:",
   ];
   for (const message of messages) {
-    lines.push(`- ${partyName(bundle, message.senderId)}: \"${message.messageText}\"`);
+    lines.push(`- ${partyName(bundle, message.senderId)}: "${message.messageText}"`);
   }
   return lines.join("\n");
 }
@@ -99,7 +99,7 @@ function draftReport(bundle: CaseBundle): string {
   const { summary } = bundle;
   const parties = bundle.contacts.map((contact) => `${contact.name} (${contact.number})`).join("; ");
   return [
-    `Short review draft \u2014 ${summary.name}`,
+    `Short review draft — ${summary.name}`,
     summary.sample ? "This is the labeled sample case. It is not an acquisition from a phone." : `Operator: ${summary.operator}. Device: ${summary.deviceLabel}.`,
     "",
     `People: ${parties || "none recorded"}.`,
@@ -117,7 +117,7 @@ export function timelineRows(bundle: CaseBundle): { at: string; line: string }[]
   for (const message of bundle.messages) {
     rows.push({
       at: message.timestampUtc,
-      line: `${formatUtc(message.timestampUtc)} SMS ${partyName(bundle, message.senderId)} \u2192 ${partyName(bundle, message.receiverId)}: ${message.messageText}`,
+      line: `${formatUtc(message.timestampUtc)} SMS ${partyName(bundle, message.senderId)} → ${partyName(bundle, message.receiverId)}: ${message.messageText}`,
     });
   }
   for (const call of bundle.calls) {
