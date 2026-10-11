@@ -1,0 +1,50 @@
+{
+  "name": "openforensic",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Authorized Android logical acquisition workstation and web case viewer.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:web": "vite --config web/vite.config.ts",
+    "build": "electron-vite build",
+    "build:web": "vite build --config web/vite.config.ts",
+    "sample": "tsx scripts/write-sample.ts",
+    "test": "tsx --test shared/*.test.ts src/engine/*.test.ts src/db/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p web/tsconfig.json"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "mongodb": "^6.20.0",
+    "openai": "^4.104.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^4.2.5",
+    "@netlify/vite-plugin": "^3.0.1",
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.12",
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "electron": "^36.3.2",
+    "electron-vite": "^5.0.0",
+    "lucide-react": "^0.513.0",
+    "tailwind-merge": "^3.3.0",
+    "tailwindcss": "^4.1.8",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
