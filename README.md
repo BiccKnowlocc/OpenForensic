@@ -31,7 +31,7 @@ npm run dist
 
 `package` produces an unpacked desktop application; `dist` produces the platform installer. macOS signing/notarization and Windows signing require operator-provided release credentials. Run platform packaging on the corresponding platform.
 
-On Windows the evaluation executable is `release/win-unpacked/OpenForensic.exe`. Keep the entire `win-unpacked` folder together. The build uses the Electron distribution already installed in `node_modules/electron/dist`, which avoids a second download and archive staging rename. Host Python and Android platform tools are still required for their corresponding functions.
+The packaging wrapper writes to `release-v<version>` by default; for this version the Windows executable is `release-v0.1.2/win-unpacked/OpenForensic.exe`. Keep the entire `win-unpacked` folder together, including `resources/engine`. Windows packaging refuses to replace a target folder with a running OpenForensic process. Existing output folders are refused on other platforms; choose another release folder. Use `node scripts/package.mjs --check` for a read-only preflight, or `npm run package -- --output-name=release-v0.1.2-build2` for a separate output. Do not invoke electron-builder directly against a running app. The build uses the Electron distribution already installed in `node_modules/electron/dist`, which avoids a second download and archive staging rename. Host Python and Android platform tools are still required for their corresponding functions.
 
 ## Connection troubleshooting
 

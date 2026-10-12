@@ -1,5 +1,11 @@
 # Validation record and release gates
 
+## Older application bundle repair — 2026-10-12
+
+An attempted rebuild against the running v0.1.1 directory removed unlocked application files before it failed on a locked `app.asar`. The older parser then failed because `resources/engine/runner.py` was missing. The four unchanged Python modules were restored and SHA-256 checked. The saved v0.1.1 Windows ZIP was verified against its delivery checksum, and all remaining missing application files were restored without replacing any differing existing file. No case or evidence files were modified. The complete desktop import/parse/search/media/verify/PDF workflow passed through the repaired v0.1.1 executable using an isolated synthetic case.
+
+Packaging now uses a versioned output and a wrapper that validates containment, refuses linked targets, and on Windows refuses an output containing a running OpenForensic process. A live isolated v0.1.1 instance confirmed that its folder is refused, a fresh independent output is accepted, escaped names are rejected, and executable/parser files remain present. Runtime code in the v0.1.2 bundle is unchanged by this packaging-only repair.
+
 ## Preserve-data sanitization preview 0.1.2 — 2026-10-12
 
 The user requires existing data to remain, so this feature supplies no factory reset, raw erase, or promise of complete permanent deleted-data destruction. It is a separately selected, case-blocked free-space exercise on primary emulated storage. An explicit operator/authority, fresh assessment, typed serial, coverage/backup acknowledgement, and native confirmation are required.

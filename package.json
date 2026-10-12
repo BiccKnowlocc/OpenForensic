@@ -23,8 +23,8 @@
     "test:desktop": "npm run build && node scripts/desktop-smoke.mjs",
     "rebuild": "electron-builder install-app-deps",
     "postinstall": "electron-builder install-app-deps",
-    "package": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder"
+    "package": "npm run build && node scripts/package.mjs --dir",
+    "dist": "npm run build && node scripts/package.mjs"
   },
   "dependencies": {
     "@devicefarmer/adbkit": "3.3.9",
