@@ -1,4 +1,5 @@
 import path from "node:path";
+import { savedFromManifest } from "../../shared/savedFiles";
 import type { DeviceFingerprint, ExtractEvent, ManifestItem } from "../../shared/types";
 import { appendAudit } from "./auditLog";
 import {
@@ -6,6 +7,7 @@ import {
   contentQuery,
   fingerprintDevice,
   listSharedFiles,
+  readDevicePosture,
   pullHashed,
   watchDevice,
   writeCommandHashed,
@@ -14,7 +16,7 @@ import {
 import { failureMessage } from "./classify";
 import { callsFromRows, contactsFromRows, messagesFromSmsRows, parseContentRows } from "./contentQuery";
 import { addManifestItem, readManifest, writeManifest } from "./manifest";
-import { replaceCaseRecords, readCaseFile } from "./caseFile";
+import { replaceCaseRecords, readCaseFile, type CaseRecords } from "./caseFile";
 import { replaceMessages } from "../db/index";
 
 const SOURCES = [
@@ -36,10 +38,12 @@ export async function runLogicalExtraction(options: {
   const emit = (event: ExtractEvent) => onEvent(event);
   try {
     const device = await fingerprintDevice(serial);
+    device.posture = await readDevicePosture(serial);
     const manifest = await readManifest(caseDir);
     manifest.device = device;
     await writeManifest(caseDir, manifest);
-    await appendAudit(caseDir, { action: "extraction_started", detail: `Logical extraction on ${device.model} (${device.serial}). Rooted shell: ${device.rooted ? "yes, v1 still reads only logical sources" : "no"}.` });
+    const posture = device.posture;
+    await appendAudit(caseDir, { action: "extraction_started", detail: `Logical extraction on ${device.model} (${device.serial}). Rooted shell: ${device.rooted ? "yes, v1 still reads only logical sources" : "no"}. Patch ${posture.securityPatch}. Encryption ${posture.encryption}. Credential ${posture.credential}.` });
     emit({ type: "log", message: `Device ${device.model}, Android ${device.android}, SELinux ${device.selinux}.` });
 
     const existing = await readCaseFile(caseDir);
@@ -59,11 +63,11 @@ export async function runLogicalExtraction(options: {
     emitProgress();
 
     for (const source of SOURCES) {
-      if (disconnected) return await stopDisconnect(caseDir, emit);
+      if (disconnected) return await stopDisconnect(caseDir, emit, { messages, calls, contacts, media });
       emit({ type: "source", source: source.id, status: "reading", message: `Reading ${source.uri}` });
       try {
         const result = await contentQuery(serial, source.uri);
-        if (disconnected) return await stopDisconnect(caseDir, emit);
+        if (disconnected) return await stopDisconnect(caseDir, emit, { messages, calls, contacts, media });
         assertCommandOk(result, source.uri);
         const localPath = `raw/${source.id}.txt`;
         const digests = await writeCommandHashed(result, path.join(caseDir, localPath));
@@ -77,12 +81,13 @@ export async function runLogicalExtraction(options: {
         await remember(caseDir, source.uri, localPath, digests, emit, source.id, source.label);
       } catch (error) {
         const outcome = await recordSourceError(caseDir, source.id, source.uri, error, emit);
+        if (outcome === "partial") return markPartial(caseDir, emit, failureText(error, source.uri), { messages, calls, contacts, media });
         if (outcome === "stop") return { ok: false, message: failureText(error, source.uri) };
       }
     }
 
     for (const root of MEDIA_ROOTS) {
-      if (disconnected) return await stopDisconnect(caseDir, emit);
+      if (disconnected) return await stopDisconnect(caseDir, emit, { messages, calls, contacts, media });
       const sourceId = root.split("/").pop()?.toLowerCase() ?? "media";
       emit({ type: "source", source: sourceId, status: "reading", message: `Listing ${root}` });
       try {
@@ -99,7 +104,7 @@ export async function runLogicalExtraction(options: {
         }
         emitProgress();
         for (const file of files) {
-          if (disconnected) return await stopDisconnect(caseDir, emit);
+          if (disconnected) return await stopDisconnect(caseDir, emit, { messages, calls, contacts, media });
           const remotePath = file.path;
           const relative = remotePath.replace(/^\/sdcard\//, "");
           const localPath = path.join("files", relative);
@@ -129,12 +134,16 @@ export async function runLogicalExtraction(options: {
         }
       } catch (error) {
         const outcome = await recordSourceError(caseDir, sourceId, root, error, emit);
+        if (outcome === "partial") return markPartial(caseDir, emit, failureText(error, root), { messages, calls, contacts, media });
         if (outcome === "stop") return { ok: false, message: failureText(error, root) };
       }
     }
 
     await replaceCaseRecords(caseDir, { messages, calls, contacts, media });
     await replaceMessages(path.join(caseDir, "case_store.db"), messages);
+    const finished = await readManifest(caseDir);
+    finished.acquisition = "complete";
+    await writeManifest(caseDir, finished);
     await appendAudit(caseDir, { action: "extraction_completed", detail: `SMS ${messages.length}, calls ${calls.length}, contacts ${contacts.length}, media ${media.length}.` });
     if (bytesExpected === null) bytesExpected = bytesDone;
     unknownFiles = 0;
@@ -175,7 +184,7 @@ async function recordSourceError(
   source: string,
   error: unknown,
   emit: (event: ExtractEvent) => void,
-): Promise<"continue" | "stop"> {
+): Promise<"continue" | "stop" | "partial"> {
   const kind = error instanceof AdbCommandError ? error.kind : "other";
   const message = failureText(error, source);
   await appendAudit(caseDir, { action: "source_failed", level: "error", detail: message });
@@ -190,18 +199,41 @@ async function recordSourceError(
     error: message,
   });
   emit({ type: "source", source: sourceId, status: "failed", message });
-  if (kind === "disconnect" || kind === "encrypted") {
+  if (kind === "disconnect") return "partial";
+  if (kind === "encrypted") {
     emit({ type: "error", message });
     return "stop";
   }
   return "continue";
 }
 
-async function stopDisconnect(caseDir: string, emit: (event: ExtractEvent) => void) {
+async function markPartial(
+  caseDir: string,
+  emit: (event: ExtractEvent) => void,
+  message: string,
+  records: { messages: CaseRecords["messages"]; calls: CaseRecords["calls"]; contacts: CaseRecords["contacts"]; media: CaseRecords["media"] },
+) {
+  await replaceCaseRecords(caseDir, records);
+  await replaceMessages(path.join(caseDir, "case_store.db"), records.messages);
+  const manifest = await readManifest(caseDir);
+  manifest.acquisition = "partial";
+  await writeManifest(caseDir, manifest);
+  const saved = savedFromManifest(manifest);
+  const names = saved.map((item) => item.sourcePath).join(", ") || "nothing hashed yet";
+  const detail = `USB link dropped. Partial pull. Saved: ${names}.`;
+  await appendAudit(caseDir, { action: "extraction_partial", level: "error", detail });
+  const text = `${message} ${saved.length} file${saved.length === 1 ? "" : "s"} saved.`;
+  emit({ type: "error", status: "stopped", partial: true, saved, message: text });
+  return { ok: false, message: text };
+}
+
+async function stopDisconnect(
+  caseDir: string,
+  emit: (event: ExtractEvent) => void,
+  records: { messages: CaseRecords["messages"]; calls: CaseRecords["calls"]; contacts: CaseRecords["contacts"]; media: CaseRecords["media"] },
+) {
   const message = failureText(new AdbCommandError("disconnect", "USB device disappeared.", { code: 1, stdout: "", stderr: "device offline" }), "the phone");
-  await appendAudit(caseDir, { action: "usb_disconnect", level: "error", detail: message });
-  emit({ type: "error", status: "stopped", message });
-  return { ok: false, message };
+  return markPartial(caseDir, emit, message, records);
 }
 
 function failureText(error: unknown, source: string): string {
