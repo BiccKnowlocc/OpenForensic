@@ -1,5 +1,6 @@
 import { localReview } from "../../shared/aiReview";
 import { searchBundle } from "../../shared/search";
+import { sampleFileTexts } from "../../shared/sampleSource";
 import sample from "../../shared/sample-case.json";
 import type { CaseBundle, CaseListResponse, CaseSummary, ExaminerApi, ReviewRequest } from "../../shared/types";
 
@@ -62,6 +63,7 @@ export const webApi: ExaminerApi = {
     return {
       adbFound: false,
       devices: [],
+      posture: null,
       message: "This viewer does not talk to USB. Acquisition runs in the desktop app on the examiner machine.",
     };
   },
@@ -97,5 +99,11 @@ export const webApi: ExaminerApi = {
   async search(caseId, query) {
     const bundle = await this.getCase(caseId);
     return searchBundle(bundle, query);
+  },
+  mediaSrc(caseId, localPath) {
+    if (caseId !== "harbor-street-sample") return null;
+    const file = Object.values(sampleFileTexts).find((item) => item.localPath === localPath);
+    if (!file || !localPath.toLowerCase().endsWith(".svg")) return null;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(file.text)}`;
   },
 };

@@ -21,5 +21,7 @@ export const desktopApi: ExaminerApi = {
   subscribe: (callback) => bridge().subscribe(callback),
   review: (input) => bridge().review(input),
   search: (caseId, query) => bridge().search(caseId, query),
+  verifyCase: (caseId) => bridge().verifyCase?.(caseId) ?? Promise.reject(new Error("File check runs in the desktop app.")),
+  mediaSrc: (caseId, localPath) => bridge().mediaSrc?.(caseId, localPath) ?? null,
   publishToAtlas: (caseId) => bridge().publishToAtlas?.(caseId) ?? Promise.resolve({ ok: false, message: "Atlas publish is not available." }),
 };

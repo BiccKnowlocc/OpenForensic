@@ -8,6 +8,7 @@ import { Button } from "../components/ui/button";
 import { Dialog, DialogContent } from "../components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Chat } from "./Chat";
+import { Custody } from "./Custody";
 import { Monitor } from "./Monitor";
 import { Review } from "./Review";
 import { Timeline } from "./Timeline";
@@ -77,11 +78,13 @@ export function CaseScreen() {
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
               <TabsTrigger value="messages">Messages</TabsTrigger>
               <TabsTrigger value="review">Review</TabsTrigger>
+              <TabsTrigger value="custody">Custody</TabsTrigger>
             </TabsList>
             <TabsContent value="monitor" className="pt-4"><Monitor bundle={bundle} onChange={() => void load()} /></TabsContent>
             <TabsContent value="timeline" className="pt-4"><Timeline bundle={bundle} /></TabsContent>
             <TabsContent value="messages" className="pt-4"><Chat bundle={bundle} threadId={threadId} onThread={(id) => setThreadId(id)} /></TabsContent>
             <TabsContent value="review" className="pt-4"><Review bundle={bundle} threadId={threadId} /></TabsContent>
+            <TabsContent value="custody" className="pt-4"><Custody bundle={bundle} /></TabsContent>
           </Tabs>
         </>
       ) : null}

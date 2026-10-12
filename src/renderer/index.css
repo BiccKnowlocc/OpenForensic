@@ -31,3 +31,20 @@ body {
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: #3d4f47; border-radius: 99px; }
+
+@media print {
+  body.printing-custody { background: white; }
+  body.printing-custody * { visibility: hidden; }
+  body.printing-custody #custody-report,
+  body.printing-custody #custody-report * { visibility: visible; }
+  body.printing-custody #custody-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: 0;
+    background: white;
+    color: black;
+  }
+  body.printing-custody #custody-report .text-muted { color: #333; }
+}

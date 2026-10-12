@@ -20,6 +20,8 @@ const api: ExaminerApi = {
   },
   review: (input) => ipcRenderer.invoke("ai:review", input),
   search: (caseId, query) => ipcRenderer.invoke("case:search", caseId, query),
+  verifyCase: (caseId) => ipcRenderer.invoke("case:verify", caseId),
+  mediaSrc: (caseId, localPath) => `of-media://case/${encodeURIComponent(caseId)}/${localPath.split("/").map((part) => encodeURIComponent(part)).join("/")}`,
   publishToAtlas: (caseId) => ipcRenderer.invoke("atlas:publish", caseId),
 };
 
