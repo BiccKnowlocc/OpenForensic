@@ -12,6 +12,8 @@ The repair handles forwarded socket errors, shares and bounds scans, starts the 
 
 TypeScript checking, the production build, all 12 TypeScript tests, and the complete desktop workflow passed for this repair. Windows packaging passed, followed by the same full workflow against the packaged executable. An additional isolated packaged-app check passed for v0.1.1, automatic ADB location, saving the executable through native IPC, restarting the host daemon, concurrent device scans, and live cloud-disabled Ollama status. Existing evidence and case folders were not modified during troubleshooting. The native SQLite/parser/case integration passed; its synthetic AI endpoint checks were skipped locally because the user's real Ollama service occupied port 11434.
 
+The synthetic desktop workflow explicitly disables ADB discovery so it cannot start a real host daemon or keep the test runner's inherited pipes open during teardown. USB/tool/recovery checks were run separately against the packaged app. CI jobs have a ten-minute limit.
+
 - Windows x64, Node.js 26.7.0, Python 3.14.7, Electron 44.7.0.
 - TypeScript checking and production Vite builds passed.
 - Seven TypeScript unit tests and thirteen Python engine tests passed.

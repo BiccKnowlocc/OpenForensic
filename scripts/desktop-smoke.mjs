@@ -64,7 +64,13 @@ assert.equal(
   archive.stderr || "Python fixture generation failed",
 );
 await mkdir("artifacts", { recursive: true });
-const env = { ...process.env, OPENFORENSIC_TEST_HIDE: "1" };
+const env = {
+  ...process.env,
+  OPENFORENSIC_TEST_HIDE: "1",
+  // This workflow exercises synthetic case material. Keep device discovery
+  // from starting a host daemon whose inherited pipes can delay test exit.
+  OPENFORENSIC_ADB: join(root, "no-device-bridge"),
+};
 delete env.ELECTRON_RUN_AS_NODE;
 delete env.ELECTRON_RENDERER_URL;
 let desktop;
