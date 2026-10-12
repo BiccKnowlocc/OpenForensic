@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { DeviceFingerprint } from "../../shared/types";
 import { classifyAdbFailure, type FailureKind } from "./classify";
@@ -160,7 +160,27 @@ export async function listRemoteFiles(serial: string, root: string): Promise<str
   return parseFindListing(result.stdout, root).slice(0, 100);
 }
 
-export async function pullHashed(serial: string, remotePath: string, destPath: string, shouldStop: () => boolean): Promise<Digests> {
+export function parseStatLines(text: string): { path: string; bytes: number }[] {
+  const files: { path: string; bytes: number }[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.trim().match(/^(\d+)\s+(.+)$/);
+    if (!match) continue;
+    files.push({ bytes: Number(match[1]), path: match[2] });
+  }
+  return files;
+}
+
+export async function listSharedFiles(serial: string, root: string): Promise<{ path: string; bytes: number | null }[]> {
+  const sized = await runAdb(["-s", serial, "shell", `find ${quoted(root)} -type f -exec stat -c '%s %n' {} +`], 20000);
+  const sizedKind = classifyAdbFailure(`${sized.stderr}\n${sized.stdout}`);
+  if (sized.code === 0 && sizedKind !== "permission" && sizedKind !== "encrypted" && sizedKind !== "disconnect") {
+    return parseStatLines(sized.stdout).slice(0, 100).map((file) => ({ path: file.path, bytes: file.bytes }));
+  }
+  const listed = await listRemoteFiles(serial, root);
+  return listed.map((path) => ({ path, bytes: null }));
+}
+
+export async function pullHashed(serial: string, remotePath: string, destPath: string, shouldStop: () => boolean, onBytes?: (written: number) => void): Promise<Digests> {
   await mkdir(path.dirname(destPath), { recursive: true });
   if (shouldStop()) throw new AdbCommandError("disconnect", "USB device disappeared before the pull.", { code: 1, stdout: "", stderr: "device offline" });
   const child = spawn("adb", ["-s", serial, "exec-out", `cat ${quoted(remotePath)}`], { stdio: ["ignore", "pipe", "pipe"] });
@@ -168,11 +188,29 @@ export async function pullHashed(serial: string, remotePath: string, destPath: s
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk) => { stderr += chunk; });
   const hasher = createHashTransform();
+  let written = 0;
+  let lastReport = 0;
+  const counter = new Transform({
+    transform(chunk, _encoding, callback) {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      written += buffer.length;
+      const now = Date.now();
+      if (onBytes && now - lastReport >= 250) {
+        lastReport = now;
+        onBytes(written);
+      }
+      callback(null, buffer);
+    },
+    flush(callback) {
+      onBytes?.(written);
+      callback();
+    },
+  });
   const stopTimer = setInterval(() => {
     if (shouldStop()) child.kill("SIGKILL");
   }, 500);
   try {
-    await pipeline(child.stdout, hasher.transform, createWriteStream(destPath));
+    await pipeline(child.stdout, counter, hasher.transform, createWriteStream(destPath));
   } finally {
     clearInterval(stopTimer);
   }
