@@ -56,6 +56,17 @@ export type ManifestItem = {
   error?: string;
 };
 
+export type CredentialReport = "set" | "not set" | "not reported";
+
+export type DevicePosture = {
+  serial: string;
+  model: string;
+  android: string;
+  securityPatch: string;
+  encryption: string;
+  credential: CredentialReport;
+};
+
 export type DeviceFingerprint = {
   serial: string;
   model: string;
@@ -63,6 +74,7 @@ export type DeviceFingerprint = {
   selinux: string;
   rooted: boolean;
   state: "device" | "unauthorized" | "offline" | "missing";
+  posture?: DevicePosture;
 };
 
 export type EvidenceManifest = {
@@ -71,6 +83,40 @@ export type EvidenceManifest = {
   createdAt: string;
   device: DeviceFingerprint | null;
   items: ManifestItem[];
+  acquisition?: "partial" | "complete";
+};
+
+export type SavedFile = {
+  sourcePath: string;
+  localPath: string;
+  bytes: number;
+  sha256: string;
+  acquiredAt: string;
+};
+
+export type VerifyStatus = "match" | "mismatch" | "missing" | "skipped";
+
+export type VerifyItem = {
+  sourcePath: string;
+  localPath: string;
+  status: VerifyStatus;
+  detail: string;
+};
+
+export type VerifyReport = {
+  checkedAt: string;
+  matches: number;
+  mismatches: number;
+  missing: number;
+  skipped: number;
+  items: VerifyItem[];
+  message: string;
+};
+
+export type CaseSearch = {
+  messages: Message[];
+  calls: CallRecord[];
+  contacts: Contact[];
 };
 
 export type AuditLevel = "info" | "error";
@@ -109,6 +155,7 @@ export type DeviceStatus = {
   adbFound: boolean;
   devices: DeviceFingerprint[];
   message: string;
+  posture: DevicePosture | null;
 };
 
 export type SourceStatus = "waiting" | "reading" | "hashed" | "failed" | "stopped";
@@ -120,6 +167,8 @@ export type ExtractEvent = {
   message: string;
   bytesDone?: number;
   bytesExpected?: number | null;
+  partial?: boolean;
+  saved?: SavedFile[];
 };
 
 export type ReviewRequest = {
@@ -157,6 +206,8 @@ export type ExaminerApi = {
   stopWipe: () => Promise<void>;
   subscribe: (callback: (event: ExtractEvent) => void) => () => void;
   review: (input: ReviewRequest) => Promise<ReviewResponse>;
-  search: (caseId: string, query: string) => Promise<Message[]>;
+  search: (caseId: string, query: string) => Promise<CaseSearch>;
+  verifyCase?: (caseId: string) => Promise<VerifyReport>;
+  mediaSrc?: (caseId: string, localPath: string) => string | null;
   publishToAtlas?: (caseId: string) => Promise<{ ok: boolean; message: string }>;
 };

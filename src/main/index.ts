@@ -1,14 +1,20 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, net, protocol } from "electron";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { localReview } from "../../shared/aiReview";
+import { searchBundle } from "../../shared/search";
 import type { ReviewRequest } from "../../shared/types";
-import { adbAvailable, fingerprintDevice, listDevices } from "../engine/adb";
-import { archiveCase, createCase, ensureSample, listCaseSummaries, openCase, openCaseDirectory } from "../engine/caseFolder";
+import { adbAvailable, fingerprintDevice, listDevices, readDevicePosture } from "../engine/adb";
+import { archiveCase, assertCaseId, createCase, ensureSample, listCaseSummaries, openCase, openCaseDirectory } from "../engine/caseFolder";
 import { runLogicalExtraction } from "../engine/extract";
 import { removeWipeFiles, runFreeSpaceWipe } from "../engine/freeSpaceWipe";
+import { verifyCaseFiles } from "../engine/verifyCase";
 import { publishBundle } from "./atlas";
 import { searchMessages } from "../db/index";
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: "of-media", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
+]);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 let extracting = false;
@@ -39,6 +45,27 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  protocol.handle("of-media", async (request) => {
+    try {
+      const url = new URL(request.url);
+      const parts = url.pathname.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
+      const caseId = parts[0] ?? "";
+      const relative = parts.slice(1).join("/");
+      assertCaseId(caseId);
+      const caseDir = path.resolve(casesRoot(), caseId);
+      const full = path.resolve(caseDir, relative);
+      if (full !== caseDir && !full.startsWith(`${caseDir}${path.sep}`)) return new Response(null, { status: 403 });
+      const bundle = await openCase(casesRoot(), caseId);
+      const allowed = new Set([
+        ...bundle.media.map((item) => item.localPath),
+        ...bundle.manifest.items.filter((item) => item.status === "hashed").map((item) => item.localPath),
+      ]);
+      if (!allowed.has(relative)) return new Response(null, { status: 404 });
+      return net.fetch(pathToFileURL(full).href);
+    } catch {
+      return new Response(null, { status: 404 });
+    }
+  });
   await ensureSample(casesRoot());
   createWindow();
   app.on("activate", () => {
@@ -73,7 +100,7 @@ ipcMain.handle("cases:pick", async () => {
 ipcMain.handle("device:status", async () => {
   const found = await adbAvailable();
   if (!found) {
-    return { adbFound: false, devices: [], message: "adb is not on PATH. Install Android platform-tools. The Harbor Street sample still opens." };
+    return { adbFound: false, devices: [], posture: null, message: "adb is not on PATH. Install Android platform-tools. The Harbor Street sample still opens." };
   }
   const devices = await listDevices();
   const authorized = devices.find((device) => device.state === "device");
@@ -81,13 +108,16 @@ ipcMain.handle("device:status", async () => {
     const message = devices.some((device) => device.state === "unauthorized")
       ? "The phone is connected, but USB debugging is not authorized. Accept the prompt on the phone. OpenForensic will not bypass it."
       : "No phone is attached. Plug in the Android phone and accept the USB debugging prompt.";
-    return { adbFound: true, devices, message };
+    return { adbFound: true, devices, posture: null, message };
   }
   const finger = await fingerprintDevice(authorized.serial);
+  const posture = await readDevicePosture(authorized.serial);
+  finger.posture = posture;
   const merged = devices.map((device) => device.serial === finger.serial ? finger : device);
   return {
     adbFound: true,
     devices: merged,
+    posture,
     message: `${finger.model} is authorized. Rooted: ${finger.rooted ? "yes" : "no"}. v1 reads SMS, calls, contacts, and shared media only.`,
   };
 });
@@ -155,8 +185,17 @@ ipcMain.handle("ai:review", async (_event, request: ReviewRequest) => {
 });
 
 ipcMain.handle("case:search", async (_event, caseId: string, query: string) => {
-  return searchMessages(path.join(casesRoot(), caseId, "case_store.db"), query);
+  const bundle = await openCase(casesRoot(), caseId);
+  const found = searchBundle(bundle, query);
+  try {
+    const messages = await searchMessages(path.join(casesRoot(), caseId, "case_store.db"), query);
+    return { ...found, messages };
+  } catch {
+    return found;
+  }
 });
+
+ipcMain.handle("case:verify", async (_event, caseId: string) => verifyCaseFiles(path.join(casesRoot(), caseId)));
 
 ipcMain.handle("atlas:publish", async (_event, caseId: string) => {
   const uri = process.env.MONGODB_URI;
