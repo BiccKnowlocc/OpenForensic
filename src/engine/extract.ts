@@ -5,7 +5,7 @@ import {
   AdbCommandError,
   contentQuery,
   fingerprintDevice,
-  listRemoteFiles,
+  listSharedFiles,
   pullHashed,
   watchDevice,
   writeCommandHashed,
@@ -47,6 +47,16 @@ export async function runLogicalExtraction(options: {
     let calls = existing.calls;
     let contacts = existing.contacts;
     const media = [...existing.media];
+    let bytesDone = 0;
+    let bytesExpected: number | null = null;
+    let unknownFiles = 0;
+    const emitProgress = () => emit({
+      type: "progress",
+      message: "",
+      bytesDone,
+      bytesExpected: unknownFiles === 0 ? bytesExpected : null,
+    });
+    emitProgress();
 
     for (const source of SOURCES) {
       if (disconnected) return await stopDisconnect(caseDir, emit);
@@ -61,6 +71,9 @@ export async function runLogicalExtraction(options: {
         if (source.id === "sms") messages = messagesFromSmsRows(rows, existing.summary.ownerNumber);
         if (source.id === "calls") calls = callsFromRows(rows);
         if (source.id === "contacts") contacts = contactsFromRows(rows);
+        bytesDone += digests.bytes;
+        if (bytesExpected !== null) bytesExpected = bytesExpected + digests.bytes;
+        emitProgress();
         await remember(caseDir, source.uri, localPath, digests, emit, source.id, source.label);
       } catch (error) {
         const outcome = await recordSourceError(caseDir, source.id, source.uri, error, emit);
@@ -73,17 +86,34 @@ export async function runLogicalExtraction(options: {
       const sourceId = root.split("/").pop()?.toLowerCase() ?? "media";
       emit({ type: "source", source: sourceId, status: "reading", message: `Listing ${root}` });
       try {
-        const files = await listRemoteFiles(serial, root);
+        const files = await listSharedFiles(serial, root);
         if (files.length === 0) {
           emit({ type: "source", source: sourceId, status: "hashed", message: `${root} is empty or not present.` });
           await appendAudit(caseDir, { action: "source_empty", detail: `${root} returned no files.` });
           continue;
         }
-        for (const remotePath of files) {
+        if (bytesExpected === null) bytesExpected = bytesDone;
+        for (const file of files) {
+          if (file.bytes === null) unknownFiles += 1;
+          else bytesExpected += file.bytes;
+        }
+        emitProgress();
+        for (const file of files) {
           if (disconnected) return await stopDisconnect(caseDir, emit);
+          const remotePath = file.path;
           const relative = remotePath.replace(/^\/sdcard\//, "");
           const localPath = path.join("files", relative);
-          const digests = await pullHashed(serial, remotePath, path.join(caseDir, localPath), () => disconnected);
+          const before = bytesDone;
+          const digests = await pullHashed(serial, remotePath, path.join(caseDir, localPath), () => disconnected, (written) => {
+            bytesDone = before + written;
+            emitProgress();
+          });
+          bytesDone = before + digests.bytes;
+          if (file.bytes === null) {
+            unknownFiles = Math.max(0, unknownFiles - 1);
+            if (bytesExpected !== null) bytesExpected += digests.bytes;
+          }
+          emitProgress();
           media.push({
             id: `media-${Buffer.from(remotePath).toString("hex").slice(0, 12)}`,
             sourcePath: remotePath,
@@ -106,6 +136,9 @@ export async function runLogicalExtraction(options: {
     await replaceCaseRecords(caseDir, { messages, calls, contacts, media });
     await replaceMessages(path.join(caseDir, "case_store.db"), messages);
     await appendAudit(caseDir, { action: "extraction_completed", detail: `SMS ${messages.length}, calls ${calls.length}, contacts ${contacts.length}, media ${media.length}.` });
+    if (bytesExpected === null) bytesExpected = bytesDone;
+    unknownFiles = 0;
+    emitProgress();
     emit({ type: "done", message: "Logical extraction finished." });
     return { ok: true, message: "Logical extraction finished." };
   } finally {
