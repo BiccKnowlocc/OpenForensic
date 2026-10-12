@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { partyName, threadTitle, formatUtc } from "../../../shared/names";
+import { partyName, threadTitle, formatEastern } from "../../../shared/names";
 import type { CaseBundle, Message } from "../../../shared/types";
 import { useApi } from "../api-context";
 import { Badge } from "../components/ui/badge";
@@ -104,7 +104,7 @@ function Bubble({ bundle, message }: { bundle: CaseBundle; message: Message }) {
     <article className={`max-w-[40rem] rounded-md border px-3 py-2 ${outbound ? "ml-auto border-brass/40 bg-brass/10" : "mr-auto border-line bg-ink"}`}>
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
         <span>{partyName(bundle, message.senderId)}</span>
-        <span>{formatUtc(message.timestampUtc)}</span>
+        <span>{formatEastern(message.timestampUtc)}</span>
         {message.isDeletedFlag ? <Badge tone="danger">Deleted flag</Badge> : null}
       </div>
       <p className="mt-1 text-sm leading-6">{message.messageText}</p>

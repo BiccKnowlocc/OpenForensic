@@ -1,4 +1,4 @@
-import { formatUtc, partyName, threadTitle } from "./names";
+import { easternDateKey, formatEastern, partyName, threadTitle } from "./names";
 import type { CallRecord, CaseBundle, Message, ReviewRequest, ReviewResponse } from "./types";
 
 const STOP = new Set([
@@ -39,12 +39,12 @@ function ask(bundle: CaseBundle, question: string): string {
   const lines = ["From the records already in this case:"];
   for (const message of messages.slice(0, 4)) {
     lines.push(
-      `- ${formatUtc(message.timestampUtc)} SMS, ${partyName(bundle, message.senderId)} to ${partyName(bundle, message.receiverId)}: "${message.messageText}"${message.isDeletedFlag ? " (deleted flag)" : ""}`,
+      `- ${formatEastern(message.timestampUtc)} SMS, ${partyName(bundle, message.senderId)} to ${partyName(bundle, message.receiverId)}: "${message.messageText}"${message.isDeletedFlag ? " (deleted flag)" : ""}`,
     );
   }
   for (const call of calls.slice(0, 3)) {
     lines.push(
-      `- ${formatUtc(call.timestampUtc)} ${call.direction} call with ${call.name} (${call.number}), ${call.durationSec}s.`,
+      `- ${formatEastern(call.timestampUtc)} ${call.direction} call with ${call.name} (${call.number}), ${call.durationSec}s.`,
     );
   }
   for (const contact of contacts.slice(0, 3)) {
@@ -67,7 +67,7 @@ function summarizeThread(bundle: CaseBundle, threadId: string | undefined): stri
   const last = messages[messages.length - 1];
   const deleted = messages.filter((message) => message.isDeletedFlag).length;
   const lines = [
-    `${title} thread, ${messages.length} SMS, ${formatUtc(first.timestampUtc)} to ${formatUtc(last.timestampUtc)}.`,
+    `${title} thread, ${messages.length} SMS, ${formatEastern(first.timestampUtc)} to ${formatEastern(last.timestampUtc)}.`,
     deleted ? `${deleted} message has a deleted flag and is still in the provider result.` : "No deleted flag in this thread.",
     "What the messages say:",
   ];
@@ -82,12 +82,12 @@ function explainTimeline(bundle: CaseBundle): string {
   if (events.length === 0) return "This case has no timeline events yet.";
   const byDay = new Map<string, string[]>();
   for (const event of events) {
-    const day = event.at.slice(0, 10);
+    const day = easternDateKey(event.at);
     const list = byDay.get(day) ?? [];
     list.push(event.line);
     byDay.set(day, list);
   }
-  const lines = ["Timeline from the records in this case, oldest first. Times are UTC."];
+  const lines = ["Timeline from the records in this case, oldest first. Times are US Eastern."];
   for (const [day, rows] of byDay) {
     lines.push("", day);
     for (const row of rows) lines.push(`- ${row}`);
@@ -117,19 +117,19 @@ export function timelineRows(bundle: CaseBundle): { at: string; line: string }[]
   for (const message of bundle.messages) {
     rows.push({
       at: message.timestampUtc,
-      line: `${formatUtc(message.timestampUtc)} SMS ${partyName(bundle, message.senderId)} → ${partyName(bundle, message.receiverId)}: ${message.messageText}`,
+      line: `${formatEastern(message.timestampUtc)} SMS ${partyName(bundle, message.senderId)} → ${partyName(bundle, message.receiverId)}: ${message.messageText}`,
     });
   }
   for (const call of bundle.calls) {
     rows.push({
       at: call.timestampUtc,
-      line: `${formatUtc(call.timestampUtc)} ${call.direction} call ${call.name} (${call.durationSec}s)`,
+      line: `${formatEastern(call.timestampUtc)} ${call.direction} call ${call.name} (${call.durationSec}s)`,
     });
   }
   for (const item of bundle.media) {
     rows.push({
       at: item.acquiredAt,
-      line: `${formatUtc(item.acquiredAt)} media ${item.sourcePath}`,
+      line: `${formatEastern(item.acquiredAt)} media ${item.sourcePath}`,
     });
   }
   return rows.sort((a, b) => a.at.localeCompare(b.at));

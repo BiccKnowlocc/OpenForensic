@@ -114,10 +114,12 @@ export type DeviceStatus = {
 export type SourceStatus = "waiting" | "reading" | "hashed" | "failed" | "stopped";
 
 export type ExtractEvent = {
-  type: "source" | "log" | "done" | "error";
+  type: "source" | "log" | "done" | "error" | "progress";
   source?: string;
   status?: SourceStatus;
   message: string;
+  bytesDone?: number;
+  bytesExpected?: number | null;
 };
 
 export type ReviewRequest = {
