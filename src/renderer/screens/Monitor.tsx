@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { describeAcquisition, type AcquisitionStatus } from "../../../shared/acquisitionEstimate";
 import type { CaseBundle, DeviceStatus, ExtractEvent, SourceStatus } from "../../../shared/types";
-import { formatUtc } from "../../../shared/names";
+import { formatEastern } from "../../../shared/names";
 import { useApi } from "../api-context";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -28,6 +29,13 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
   const [wipeOpen, setWipeOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [wiping, setWiping] = useState(false);
+  const [clock, setClock] = useState<AcquisitionClock>({
+    status: "idle",
+    bytesDone: 0,
+    bytesExpected: null,
+    startedAt: null,
+    elapsedMs: 0,
+  });
 
   async function refreshDevice() {
     setDeviceError(null);
@@ -42,26 +50,59 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
   useEffect(() => setRows(initialRows(bundle)), [bundle]);
 
   useEffect(() => {
+    if (clock.status !== "running" || clock.startedAt === null) return undefined;
+    const timer = setInterval(() => {
+      setClock((current) => {
+        if (current.status !== "running" || current.startedAt === null) return current;
+        return { ...current, elapsedMs: Date.now() - current.startedAt };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [clock.status, clock.startedAt]);
+
+  useEffect(() => {
     return api.subscribe((event: ExtractEvent) => {
       if (event.type === "source" && event.source && event.status) {
         setRows((current) => ({ ...current, [event.source!]: { status: event.status!, message: event.message } }));
       }
-      if (event.type === "error") setBanner(event.message);
-      if (event.type === "log" || event.type === "done") setBanner(event.message);
+      if (event.type === "progress") {
+        setClock((current) => ({
+          ...current,
+          status: current.status === "idle" ? "running" : current.status,
+          bytesDone: event.bytesDone ?? current.bytesDone,
+          bytesExpected: event.bytesExpected === undefined ? current.bytesExpected : event.bytesExpected,
+          startedAt: current.startedAt ?? Date.now(),
+          elapsedMs: current.startedAt ? Date.now() - current.startedAt : current.elapsedMs,
+        }));
+      }
+      if (event.type === "error" || event.status === "stopped") {
+        setClock((current) => freezeClock(current, "stopped"));
+        setBanner(event.message);
+      }
+      if (event.type === "done") {
+        setClock((current) => freezeClock(current, "done"));
+        setBanner(event.message);
+      }
+      if (event.type === "log") setBanner(event.message);
     });
   }, [api]);
 
   async function extract() {
+    const startedAt = Date.now();
     setRunning(true);
     setBanner(null);
+    setClock({ status: "running", bytesDone: 0, bytesExpected: null, startedAt, elapsedMs: 0 });
+    let outcome: "done" | "stopped" = "stopped";
     try {
       const result = await api.extract(bundle.summary.id);
+      outcome = result.ok ? "done" : "stopped";
       setBanner(result.message);
-      if (!result.ok) setBanner(result.message);
       onChange();
     } catch (error) {
+      outcome = "stopped";
       setBanner(error instanceof Error ? error.message : "Extraction failed.");
     } finally {
+      setClock((current) => freezeClock(current, outcome));
       setRunning(false);
       void refreshDevice();
     }
@@ -166,6 +207,7 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
 
       <section className="space-y-3 rounded-md border border-line bg-panel p-4">
         <h2 className="font-serif text-2xl">Sources</h2>
+        <AcquisitionStrip clock={clock} />
         <ul className="space-y-2">
           {SOURCE_IDS.map((source) => {
             const row = rows[source.id] ?? { status: "waiting" as const, message: "Not read yet." };
@@ -189,7 +231,7 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
         <ol className="max-h-72 space-y-2 overflow-auto font-mono text-xs">
           {bundle.audit.map((event) => (
             <li key={event.id} className={event.level === "error" ? "text-danger" : "text-muted"}>
-              {formatUtc(event.at)} · {event.action} · {event.detail}
+              {formatEastern(event.at)} · {event.action} · {event.detail}
             </li>
           ))}
         </ol>
@@ -208,6 +250,52 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+type AcquisitionClock = {
+  status: AcquisitionStatus;
+  bytesDone: number;
+  bytesExpected: number | null;
+  startedAt: number | null;
+  elapsedMs: number;
+};
+
+function freezeClock(current: AcquisitionClock, status: "done" | "stopped"): AcquisitionClock {
+  if (current.status !== "running" && current.status !== "idle") return current;
+  const elapsedMs = current.startedAt ? Date.now() - current.startedAt : current.elapsedMs;
+  return { ...current, status, elapsedMs };
+}
+
+function AcquisitionStrip({ clock }: { clock: AcquisitionClock }) {
+  const readout = describeAcquisition({
+    status: clock.status,
+    bytesDone: clock.bytesDone,
+    bytesExpected: clock.bytesExpected,
+    elapsedMs: clock.elapsedMs,
+  });
+  const width = readout.hashRatio === null ? (clock.status === "running" ? 12 : 0) : Math.round(readout.hashRatio * 100);
+  return (
+    <div className="rounded border border-line p-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Readout label="Throughput" value={readout.throughputLabel} />
+        <Readout label="Hash" value={readout.hashLabel} />
+        <Readout label="Elapsed" value={readout.elapsedLabel} />
+        <Readout label="Remaining" value={readout.remainingLabel} />
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded bg-ink" aria-hidden="true">
+        <div className="h-full bg-brass transition-[width]" style={{ width: `${width}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function Readout({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-1 font-mono text-sm text-paper">{value}</p>
     </div>
   );
 }
