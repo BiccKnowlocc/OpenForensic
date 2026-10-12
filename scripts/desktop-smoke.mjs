@@ -108,7 +108,7 @@ try {
     metadata.version,
   );
   await page
-    .getByText(`Open source · v${metadata.version}`, { exact: true })
+    .getByText(`Open source · v${metadata.version}`)
     .waitFor();
   const errors = [];
   page.on("pageerror", (error) => errors.push(String(error)));

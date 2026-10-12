@@ -321,7 +321,7 @@ async function main() {
     await writeFile(join(item.root, derivative.relative_path), "tampered");
     assert.equal((await item.verify()).ok, false);
     console.log(
-      "Integration passed: native SQLite/FTS5, import/readback, Python bridge, duplicate prevention, local AI citations/report escaping, short physical capture and operator cancellation retention, seal/reopen, derivative tamper detection.",
+      "Integration passed: native SQLite/FTS5, import/readback, Python bridge, duplicate prevention, shared-storage-only retry and denied-source retention, short physical capture and operator cancellation retention, seal/reopen, derivative tamper detection. AI fixture checks run when its local port is available.",
     );
   } finally {
     item?.store.close();
