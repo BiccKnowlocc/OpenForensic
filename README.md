@@ -2,7 +2,7 @@
 
 An open-source, local Android evidence acquisition and communications examination desktop application. Electron owns device access and case storage; a sandboxed React interface provides acquisition monitoring, searchable conversations, candidate recovery inspection, local AI assistance, and report export.
 
-**Release status: executable developer preview, 0.1.2.** The build includes acquisition, integrity, parsing, UI, AI, and a separate best-effort shared-storage cleanup workflow. It is not a validated replacement for a commercial forensic suite. Real-device validation, independent examiner review, signed installers, and the unresolved upstream dependency advisory described in [SECURITY.md](SECURITY.md) are release gates before operational casework.
+**Release status: executable developer preview, 0.1.3.** The build includes acquisition, integrity, parsing, UI, AI, and a separate best-effort shared-storage cleanup workflow. It is not a validated replacement for a commercial forensic suite. Real-device validation, independent examiner review, signed installers, and the unresolved upstream dependency advisory described in [SECURITY.md](SECURITY.md) are release gates before operational casework.
 
 ## Run
 
@@ -31,7 +31,7 @@ npm run dist
 
 `package` produces an unpacked desktop application; `dist` produces the platform installer. macOS signing/notarization and Windows signing require operator-provided release credentials. Run platform packaging on the corresponding platform.
 
-The packaging wrapper writes to `release-v<version>` by default; for this version the Windows executable is `release-v0.1.2/win-unpacked/OpenForensic.exe`. Keep the entire `win-unpacked` folder together, including `resources/engine`. Windows packaging refuses to replace a target folder with a running OpenForensic process. Existing output folders are refused on other platforms; choose another release folder. Use `node scripts/package.mjs --check` for a read-only preflight, or `npm run package -- --output-name=release-v0.1.2-build2` for a separate output. Do not invoke electron-builder directly against a running app. The build uses the Electron distribution already installed in `node_modules/electron/dist`, which avoids a second download and archive staging rename. Host Python and Android platform tools are still required for their corresponding functions.
+The packaging wrapper writes to `release-v<version>` by default; for this version the Windows executable is `release-v0.1.3/win-unpacked/OpenForensic.exe`. Keep the entire `win-unpacked` folder together, including `resources/engine`. Windows packaging refuses to replace a target folder with a running OpenForensic process. Existing output folders are refused on other platforms; choose another release folder. Use `node scripts/package.mjs --check` for a read-only preflight, or `npm run package -- --output-name=release-v0.1.3-build2` for a separate output. Do not invoke electron-builder directly against a running app. The build uses the Electron distribution already installed in `node_modules/electron/dist`, which avoids a second download and archive staging rename. Host Python and Android platform tools are still required for their corresponding functions.
 
 ## Connection troubleshooting
 
@@ -92,7 +92,9 @@ Raw physical images are acquired and verified but are not automatically mounted,
 
 `src/main/integrity/hashStream.ts` uses native Node crypto accumulators in a Transform stream. Backpressure governs disk writes. Memory usage is independent of acquisition length. Both SHA-256 and MD5 are computed on incoming payload bytes; the saved file is reread and compared. MD5 provides legacy compatibility; SHA-256 is the primary integrity digest.
 
-Remote command completion uses a randomized protocol trailer that is removed before hashing. Missing or nonzero completion status fails the source, even when the host ADB command exits successfully. Raw physical captures also require the expected byte count. Cancellation, USB loss, denial, and short streams retain hashed partial files with explicit status and incidents.
+For devices advertising `shell_v2`, acquisition reads `shell,v2,raw` directly through an adbkit transport socket. A bounded streaming decoder separates stdout, stderr, and the remote exit packet; only original stdout bytes enter the evidence file and hashes. This avoids Windows CLI text-mode newline translation. Missing, interrupted, malformed, or nonzero completion fails the source. Android stderr is bounded to its last 16 KiB, records truncation, and is retained in the source audit event; warnings leave source coverage marked partial. Older devices use the existing binary `exec-out` path with a randomized completion trailer stripped before hashing. Neither path treats the host process ending as proof of remote completion. Raw physical captures also require the expected byte count. Cancellation, USB loss, denial, and short streams retain hashed partial files with explicit status and incidents. See the [Android service protocol](https://android.googlesource.com/platform/packages/modules/adb/+/refs/heads/main/docs/dev/services.md) and [shell protocol source](https://android.googlesource.com/platform/packages/modules/adb/+/refs/heads/main/shell_protocol.h).
+
+Logical capture lets the examiner deselect content providers for a shared-storage-only retry; each retry creates a new evidence item. Existing captures are preserved. Acquisition requires a 512 MiB host disk reserve and checks remaining case-drive space every second while streaming. A low-space stop retains partial evidence. Large archives require adequate destination space; this live read is not an atomic filesystem snapshot.
 
 The application enforces a typed command allowlist. **Live Android acquisition does not provide hardware write blocking:** Android services, content providers, access accounting, and `su` can change device state or logs independently of these read commands. App archives are live, non-atomic captures; clock offsets are approximate and never silently applied to timestamps.
 
@@ -126,6 +128,7 @@ src/shared/types.ts           Validated desktop API data contracts
 src/main/index.ts             Secure Electron protocols, IPC, dialogs, media, PDF export
 src/preload/index.ts          Narrow context-isolated renderer API
 src/main/adb/client.ts        adbkit inventory and bounded ADB subprocess handling
+src/main/adb/shellV2.ts      Raw binary socket stream with separate stderr and verified remote exit
 src/main/adb/policy.ts        Read command and block-path allowlist
 src/main/adb/remoteStatus.ts  Binary-safe remote exit-status trailer handling
 src/main/acquisition.ts      Logical/physical capture, heartbeat, import, partial retention
@@ -152,6 +155,7 @@ src/renderer/styles.css      Tailwind import and desktop visual design
 tests/hashStream.test.ts     Durable streaming and interruption tests
 tests/policy.test.ts         Device policy, custody tampering, and path boundary tests
 tests/remoteStatus.test.ts   Split trailers and remote failure tests
+tests/shellV2.test.ts        Binary framing, interruption, denial, cancellation, and handshake limits
 tests/python/test_engine.py  Generated SQLite/WAL/format/archive/FTS fixtures
 tests/integration.ts         Native Electron SQLite + engine + case lifecycle integration
 scripts/run-integration.mjs  Native-runtime test bundling and launcher

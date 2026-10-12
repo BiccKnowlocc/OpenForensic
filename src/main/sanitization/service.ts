@@ -13,6 +13,7 @@ import {
 import { join } from "node:path";
 import { z } from "zod";
 import { canonical, sha256, AuditLog } from "../integrity/audit";
+import { APPLICATION_VERSION } from "../../shared/version";
 import type { SanitizationTransport } from "./transport";
 import {
   CHUNK_BYTES,
@@ -307,7 +308,7 @@ export class SanitizationService {
     const path = join(this.directory, `${job.id}-${randomUUID()}.receipt.json`);
     const document = {
       format: "OpenForensic cleanup receipt v1",
-      applicationVersion: "0.1.2",
+      applicationVersion: APPLICATION_VERSION,
       job: { ...job, receiptPath: null },
       limitations: SANITIZATION_LIMITATIONS,
       assurance: "best_effort_only",

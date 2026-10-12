@@ -13,6 +13,7 @@ export function remoteRead(command: string): {
 }
 export class RemoteStatusStream extends Transform {
   private tail = Buffer.alloc(0);
+  exitCode: number | null = null;
   constructor(private marker: string) {
     super();
   }
@@ -47,6 +48,7 @@ export class RemoteStatusStream extends Transform {
       return;
     }
     const code = Number(exit.trim());
+    this.exitCode = code;
     callback(
       code === 0
         ? null

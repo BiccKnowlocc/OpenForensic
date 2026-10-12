@@ -15,11 +15,15 @@ import {
 } from "./adb/policy";
 import { ForensicCase } from "./case";
 import type { Evidence, Progress } from "../shared/types";
+import { APPLICATION_VERSION } from "../shared/version";
+
+const HOST_DISK_RESERVE = 512 * 1024 * 1024;
 
 export interface AcquisitionInput {
   serial: string;
   mode: "logical" | "physical";
   external: boolean;
+  providers?: boolean;
   appData: boolean;
   block: string;
   acknowledged: boolean;
@@ -47,6 +51,13 @@ export class AcquisitionService {
       throw new Error(
         "Record authority and acknowledge live-device acquisition effects first.",
       );
+    if (
+      input.mode === "logical" &&
+      input.providers === false &&
+      !input.external &&
+      !input.appData
+    )
+      throw new Error("Select at least one source to acquire.");
     const id = randomUUID();
     this.operatorCancelled = false;
     this.controller = new AbortController();
@@ -106,6 +117,7 @@ export class AcquisitionService {
       heartbeatUtc = new Date().toISOString();
       item.session(jobId, profile);
       item.audit.append("acquisition_started", {
+        applicationVersion: APPLICATION_VERSION,
         adbVersion: this.bridge.adbVersion ?? "unknown",
         jobId,
         input,
@@ -142,7 +154,9 @@ export class AcquisitionService {
           expected: size,
         });
       } else {
-        for (const name of Object.keys(providers) as Provider[])
+        for (const name of input.providers === false
+          ? []
+          : (Object.keys(providers) as Provider[]))
           plans.push({
             name: `${name}.txt`,
             source: providers[name],
@@ -172,7 +186,7 @@ export class AcquisitionService {
         controller.signal.throwIfAborted();
         const disk = await statfs(item.root);
         const available = disk.bavail * disk.bsize;
-        if (available < (plan.expected ?? 64 * 1024 * 1024) + 64 * 1024 * 1024)
+        if (available < (plan.expected ?? 64 * 1024 * 1024) + HOST_DISK_RESERVE)
           throw new Error(
             "Insufficient free space for acquisition and safety margin.",
           );
@@ -189,7 +203,7 @@ export class AcquisitionService {
           hashBytes: 0,
           bytesPerSecond: 0,
         });
-        const proc = this.bridge.stream(
+        const proc = await this.bridge.stream(
           input.serial,
           plan.command,
           controller.signal,
@@ -201,10 +215,38 @@ export class AcquisitionService {
           command: proc.command,
           expectedBytes: plan.expected ?? null,
         });
+        let sourceActive = true;
+        let checkingSpace = false;
         const idle = setInterval(() => {
           if (Date.now() - lastActivity > 120000)
             controller.abort(new Error("Acquisition stalled for 120 seconds."));
-        }, 5000);
+          if (!checkingSpace) {
+            checkingSpace = true;
+            void statfs(item.root)
+              .then((space) => {
+                if (
+                  sourceActive &&
+                  space.bavail * space.bsize < HOST_DISK_RESERVE
+                )
+                  controller.abort(
+                    new Error(
+                      "The case drive is running out of free space. Captured bytes are retained; choose a drive with more space before retrying.",
+                    ),
+                  );
+              })
+              .catch((failure) => {
+                if (sourceActive)
+                  controller.abort(
+                    new Error(
+                      `Cannot check free space on the case drive: ${String(failure)}`,
+                    ),
+                  );
+              })
+              .finally(() => {
+                checkingSpace = false;
+              });
+          }
+        }, 1000);
         let status: Evidence["status"] = "complete";
         let error: string | null = null;
         let verifiedDigest: Digests | null = null;
@@ -228,6 +270,9 @@ export class AcquisitionService {
             controller.signal,
           );
           await proc.completion;
+          sourceActive = false;
+          clearInterval(idle);
+          controller.signal.throwIfAborted();
           emit({
             phase: "Verifying saved bytes",
             bytes: digest.bytes,
@@ -250,6 +295,11 @@ export class AcquisitionService {
             );
           if (!digest.bytes)
             throw new Error("The device returned an empty stream.");
+          const diagnostics = proc.diagnostics?.();
+          if (diagnostics?.stderr)
+            throw new Error(
+              `Android reported acquisition warnings: ${diagnostics.stderr}. Captured bytes were retained; source coverage is incomplete or uncertain.`,
+            );
           if (
             plan.kind.startsWith("provider-") &&
             digest.bytes < 2 * 1024 * 1024 &&
@@ -268,6 +318,7 @@ export class AcquisitionService {
             : e;
           error = cause instanceof Error ? cause.message : String(cause);
         } finally {
+          sourceActive = false;
           clearInterval(idle);
           proc.stop();
         }
@@ -289,6 +340,7 @@ export class AcquisitionService {
             jobId,
             record,
             durationMs: Date.now() - started,
+            diagnostics: proc.diagnostics?.() ?? null,
           });
         } else
           item.audit.append("source_failed", {
@@ -296,6 +348,7 @@ export class AcquisitionService {
             evidenceId: id,
             source: plan.source,
             error,
+            diagnostics: proc.diagnostics?.() ?? null,
           });
         if (controller.signal.aborted) controller.signal.throwIfAborted();
       }

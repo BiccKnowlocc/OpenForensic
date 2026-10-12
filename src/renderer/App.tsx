@@ -24,6 +24,7 @@ import {
   Eraser,
 } from "lucide-react";
 import Sanitization from "./Sanitization";
+import { APPLICATION_VERSION } from "../shared/version";
 import type {
   CaseInfo,
   Stats,
@@ -133,6 +134,7 @@ export default function App() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [mode, setMode] = useState<"logical" | "physical">("logical");
   const [external, setExternal] = useState(true);
+  const [includeProviders, setIncludeProviders] = useState(true);
   const [appData, setAppData] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const [blocks, setBlocks] = useState<string[]>([]);
@@ -400,7 +402,7 @@ export default function App() {
             <span /> LOCAL EVIDENCE STORAGE
           </div>
           <p>
-            Open source · v0.1.2
+            Open source · v{APPLICATION_VERSION}
             <br />
             UTC timestamps throughout
           </p>
@@ -681,10 +683,21 @@ export default function App() {
                       </div>
                       {mode === "logical" ? (
                         <div className="checks">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={includeProviders}
+                              onChange={(e) =>
+                                setIncludeProviders(e.target.checked)
+                              }
+                              disabled={disabled}
+                            />{" "}
+                            Capture SMS, MMS, call log, and contacts providers
+                          </label>
                           <p>
-                            SMS, MMS, call log, and contacts provider responses
-                            are captured independently. Android may deny
-                            provider access.
+                            Android may deny provider access. Uncheck providers
+                            to retry shared storage without repeating earlier
+                            captures.
                           </p>
                           <label>
                             <input
@@ -755,6 +768,10 @@ export default function App() {
                           !profile ||
                           profile.serial !== serial ||
                           !acknowledged ||
+                          (mode === "logical" &&
+                            !includeProviders &&
+                            !external &&
+                            !appData) ||
                           (mode === "physical" && (!profile.root || !block))
                         }
                         onClick={() =>
@@ -763,6 +780,7 @@ export default function App() {
                               serial,
                               mode,
                               external,
+                              providers: includeProviders,
                               appData,
                               block,
                               acknowledged,

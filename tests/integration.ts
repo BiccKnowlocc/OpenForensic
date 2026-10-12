@@ -198,6 +198,71 @@ async function main() {
     assert.equal(partial?.bytes, 5);
     assert.ok(partial?.error?.includes("size mismatch"));
     assert.equal((await item.verify()).ok, true);
+    const retryCommands: string[] = [];
+    const retryPayload = Buffer.from(
+      Array.from({ length: 65536 }, (_, index) => index % 256),
+    );
+    const remoteFailure =
+      "Android read command returned exit 1: tar: Permission denied. Captured bytes were retained.";
+    const retryMock = {
+      ...mock,
+      stream: (_serial: string, command: string) => {
+        retryCommands.push(command);
+        const completion = Promise.reject(new Error(remoteFailure));
+        void completion.catch(() => {});
+        return {
+          stream: Readable.from([retryPayload]),
+          completion,
+          stop: () => {},
+          command,
+          diagnostics: () => ({
+            transport: "adb-shell-v2-raw",
+            remoteExitCode: 1,
+            stderr: "tar: Permission denied",
+            stderrTruncated: false,
+          }),
+        };
+      },
+    } as unknown as DeviceBridge;
+    const retry = new AcquisitionService(retryMock, () => {});
+    const retryInput = {
+      serial: "synthetic",
+      mode: "logical" as const,
+      providers: false,
+      external: true,
+      appData: false,
+      block: "",
+      acknowledged: true,
+    };
+    assert.throws(
+      () => retry.start(item!, { ...retryInput, external: false }),
+      /Select at least one/,
+    );
+    retry.start(item, retryInput);
+    const retryDeadline = Date.now() + 15000;
+    while (retry.active && Date.now() < retryDeadline)
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(retry.active, false);
+    assert.deepEqual(retryCommands, ["tar -cf - -C /sdcard ."]);
+    const retryEvidence = item.store
+      .evidence()
+      .find((e) => e.source === "/sdcard/");
+    assert.equal(retryEvidence?.status, "partial");
+    assert.equal(retryEvidence?.bytes, retryPayload.length);
+    assert.equal(retryEvidence?.error, remoteFailure);
+    assert.deepEqual(
+      await readFile(join(item.root, retryEvidence!.relative_path)),
+      retryPayload,
+    );
+    const retryEvent = item.audit
+      .read()
+      .find(
+        (event) =>
+          event.action === "source_finished" &&
+          (event.details as any).record?.id === retryEvidence?.id,
+      );
+    assert.equal((retryEvent?.details as any).diagnostics?.remoteExitCode, 1);
+    assert.equal((await item.verify()).ok, true);
     const cancelMock = {
       ...mock,
       stream: (_serial: string, command: string) => {

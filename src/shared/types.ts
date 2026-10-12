@@ -154,6 +154,7 @@ export interface DesktopAPI {
     serial: string;
     mode: "logical" | "physical";
     external: boolean;
+    providers?: boolean;
     appData: boolean;
     block: string;
     acknowledged: boolean;

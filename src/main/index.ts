@@ -422,6 +422,7 @@ app
         serial,
         mode: z.enum(["logical", "physical"]),
         external: z.boolean(),
+        providers: z.boolean().default(true),
         appData: z.boolean(),
         block: z.string().max(256),
         acknowledged: z.boolean(),

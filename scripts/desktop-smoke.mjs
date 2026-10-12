@@ -102,6 +102,14 @@ try {
     { folder: join(root, "cases"), fixture, report: join(root, "report.pdf") },
   );
   const page = await desktop.firstWindow();
+  const metadata = createRequire(import.meta.url)("../package.json");
+  assert.equal(
+    await desktop.evaluate(({ app }) => app.getVersion()),
+    metadata.version,
+  );
+  await page
+    .getByText(`Open source · v${metadata.version}`, { exact: true })
+    .waitFor();
   const errors = [];
   page.on("pageerror", (error) => errors.push(String(error)));
   await page.getByRole("heading", { name: "Begin with a case" }).waitFor();
@@ -151,6 +159,16 @@ try {
     .getByRole("button", { name: "Choose folder and create case" })
     .click();
   await page.getByRole("button", { name: "Import artifacts" }).waitFor();
+  const providers = page.getByLabel(
+    "Capture SMS, MMS, call log, and contacts providers",
+  );
+  assert.equal(await providers.isChecked(), true);
+  await providers.uncheck();
+  assert.equal(await providers.isChecked(), false);
+  assert.equal(
+    await page.getByLabel("Archive shared storage (/sdcard)").isChecked(),
+    true,
+  );
   await page.getByRole("button", { name: "Import artifacts" }).click();
   await page.getByRole("button", { name: "Parse & carve" }).waitFor();
   await page.getByRole("button", { name: "Parse & carve" }).click();

@@ -12,6 +12,7 @@ import { CaseStore } from "../db";
 import { AuditLog, canonical, sha256 } from "./integrity/audit";
 import { hashFile } from "./integrity/hashStream";
 import type { CaseInfo, DeviceProfile } from "../shared/types";
+import { APPLICATION_VERSION } from "../shared/version";
 
 export function within(root: string, name: string): string {
   const path = resolve(root, name);
@@ -90,7 +91,7 @@ export class ForensicCase {
     new AuditLog(join(root, "audit.jsonl")).append("case_created", {
       ...input,
       caseId,
-      tool: "OpenForensic 0.1.0",
+      tool: `OpenForensic ${APPLICATION_VERSION}`,
     });
     return new ForensicCase(root);
   }
@@ -198,7 +199,7 @@ export class ForensicCase {
         format: "OpenForensic-manifest-v1",
         case: this.info,
         sealedUtc: new Date().toISOString(),
-        toolVersion: "0.1.0",
+        toolVersion: APPLICATION_VERSION,
         runtime: process.versions,
         evidence: this.store.evidence(),
         deviceProfiles: this.audit

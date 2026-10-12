@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import type { Readable } from "node:stream";
 import { assertReadCommand, probes } from "./policy";
 import { remoteRead } from "./remoteStatus";
+import { rawShellStream, type ShellDiagnostics } from "./shellV2";
 import type { Device, DeviceProfile } from "../../shared/types";
 import { resolveAdbPath } from "../settings";
 
@@ -10,7 +11,12 @@ export function processStream(
   executable: string,
   args: string[],
   signal?: AbortSignal,
-): { stream: Readable; completion: Promise<void>; stop(): void } {
+): {
+  stream: Readable;
+  completion: Promise<void>;
+  stop(): void;
+  stderr(): string;
+} {
   const child = spawn(executable, args, {
     shell: false,
     windowsHide: true,
@@ -48,6 +54,7 @@ export function processStream(
   return {
     stream: child.stdout,
     completion,
+    stderr: () => stderr.trim(),
     stop: () => {
       child.kill();
     },
@@ -58,10 +65,15 @@ export async function collect(
   args: string[],
   max = 2 * 1024 * 1024,
   timeout = 15000,
+  signal?: AbortSignal,
 ): Promise<string> {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), timeout);
-  const proc = processStream(executable, args, abort.signal);
+  const proc = processStream(
+    executable,
+    args,
+    signal ? AbortSignal.any([signal, abort.signal]) : abort.signal,
+  );
   const chunks: Buffer[] = [];
   let size = 0;
   try {
@@ -186,8 +198,28 @@ export class DeviceBridge {
         `Device ${serial} is ${d?.state ?? "disconnected"}. Authorized USB debugging is required.`,
       );
   }
-  stream(serial: string, command: string, signal?: AbortSignal) {
+  async stream(serial: string, command: string, signal?: AbortSignal) {
     assertReadCommand(command);
+    if (
+      !/^[A-Za-z0-9_.-]{1,256}$/.test(serial) ||
+      serial.startsWith("emulator-")
+    )
+      throw new Error("Acquisition requires an authorized USB device serial.");
+    signal?.throwIfAborted();
+    const features = await collect(
+      this.adbPath,
+      ["-H", "127.0.0.1", "-P", "5037", "-s", serial, "features"],
+      65536,
+      15000,
+      signal,
+    );
+    signal?.throwIfAborted();
+    if (features.split(/[,\s]+/).includes("shell_v2"))
+      return rawShellStream(
+        () => this.client.getDevice(serial).transport(),
+        command,
+        signal,
+      );
     const remote = remoteRead(command);
     const proc = processStream(
       this.adbPath,
@@ -212,15 +244,22 @@ export class DeviceBridge {
       completion: proc.completion,
       stop: proc.stop,
       command: remote.command,
+      diagnostics: (): ShellDiagnostics => ({
+        transport: "adb-exec-out-marker",
+        remoteExitCode: remote.trailer.exitCode,
+        stderr: proc.stderr(),
+        stderrTruncated: false,
+      }),
     };
   }
   async probe(serial: string, command: string): Promise<string> {
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), 15000);
-    const proc = this.stream(serial, command, abort.signal);
+    let proc: Awaited<ReturnType<DeviceBridge["stream"]>> | undefined;
     const chunks: Buffer[] = [];
     let bytes = 0;
     try {
+      proc = await this.stream(serial, command, abort.signal);
       for await (const chunk of proc.stream) {
         bytes += chunk.length;
         if (bytes > 2 * 1024 * 1024)
@@ -231,7 +270,7 @@ export class DeviceBridge {
       return Buffer.concat(chunks).toString("utf8").trim();
     } finally {
       clearTimeout(timer);
-      proc.stop();
+      proc?.stop();
     }
   }
   async inspect(serial: string): Promise<DeviceProfile> {
