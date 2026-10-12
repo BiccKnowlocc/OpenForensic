@@ -50,9 +50,15 @@ export class AcquisitionService {
     const id = randomUUID();
     this.operatorCancelled = false;
     this.controller = new AbortController();
-    void this.run(id, item, input, this.controller).finally(() => {
-      this.controller = null;
-    });
+    void this.run(id, item, input, this.controller)
+      .catch((error) => {
+        // A failed progress recipient must not create an unhandled rejection
+        // after the acquisition's own cleanup has completed.
+        console.error("Acquisition notification failed:", error);
+      })
+      .finally(() => {
+        this.controller = null;
+      });
     return id;
   }
   private async run(

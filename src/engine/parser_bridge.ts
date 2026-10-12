@@ -29,7 +29,7 @@ const candidateSchema = z.object({
   note: z.string().max(8192),
 });
 export class ParserBridge {
-  readonly python = process.env.OPENFORENSIC_PYTHON || "python";
+  python = process.env.OPENFORENSIC_PYTHON || "python";
   constructor(private engineDirectory: string) {}
   async parse(
     item: ForensicCase,

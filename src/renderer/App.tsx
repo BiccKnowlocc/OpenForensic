@@ -33,6 +33,7 @@ import type {
   Progress,
   AiResult,
   Audit,
+  ToolStatus,
 } from "../shared/types";
 
 const api = window.forensic;
@@ -114,11 +115,9 @@ export default function App() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [serial, setSerial] = useState("");
   const [profile, setProfile] = useState<DeviceProfile | null>(null);
-  const [tools, setTools] = useState<{
-    adb: string;
-    python: string;
-    aiModels: string[];
-  } | null>(null);
+  const [tools, setTools] = useState<ToolStatus | null>(null);
+  const [setup, setSetup] = useState(false);
+  const [connectionError, setConnectionError] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -191,6 +190,30 @@ export default function App() {
       t.aiModels.includes(current) ? current : (t.aiModels[0] ?? ""),
     );
   }
+  function showDevices(list: Device[]) {
+    setDevices(list);
+    setConnectionError("");
+    setSerial((current) =>
+      list.some((d) => d.id === current)
+        ? current
+        : (list.find((d) => d.state === "device")?.id ?? ""),
+    );
+  }
+  async function recoverConnection() {
+    showDevices(await api.restartBridge());
+    await refreshTools();
+    setProfile(null);
+    setNotice(
+      "The computer's ADB service was restarted. Unlock the phone and accept its USB debugging prompt if shown.",
+    );
+  }
+  async function chooseTool(name: "adb" | "python") {
+    if (await api.selectTool(name)) {
+      await refreshTools();
+      if (name === "adb") showDevices(await api.devices());
+      setNotice("Tool path saved for future launches.");
+    }
+  }
   useEffect(() => {
     void refresh().catch((e) => setError(String(e)));
     void refreshTools().catch((e) => setError(String(e)));
@@ -204,28 +227,28 @@ export default function App() {
   }, []);
   useEffect(() => {
     let mounted = true;
+    let timer: ReturnType<typeof setTimeout>;
     async function detect() {
+      if (busy || acquiring) return;
       try {
         const list = await api.devices();
+        if (mounted) showDevices(list);
+      } catch (error) {
         if (mounted) {
-          setDevices(list);
-          setSerial((current) =>
-            list.some((d) => d.id === current)
-              ? current
-              : (list.find((d) => d.state === "device")?.id ?? ""),
+          setDevices([]);
+          setSerial("");
+          setConnectionError(
+            error instanceof Error ? error.message : String(error),
           );
         }
-      } catch {
-        if (mounted) setDevices([]);
+      } finally {
+        if (mounted) timer = setTimeout(() => void detect(), 5000);
       }
     }
     void detect();
-    const timer = setInterval(() => {
-      if (!busy && !acquiring) void detect();
-    }, 5000);
     return () => {
       mounted = false;
-      clearInterval(timer);
+      clearTimeout(timer);
     };
   }, [busy, acquiring]);
   useEffect(() => {
@@ -344,14 +367,17 @@ export default function App() {
             <span /> LOCAL EVIDENCE STORAGE
           </div>
           <p>
-            Open source · v0.1.0
+            Open source · v0.1.1
             <br />
             UTC timestamps throughout
           </p>
           <button
             className="text-button"
             disabled={disabled}
-            onClick={() => run(refreshTools)}
+            onClick={() => {
+              setSetup(true);
+              void run(refreshTools);
+            }}
           >
             <RefreshCw size={13} /> Check system tools
           </button>
@@ -419,6 +445,12 @@ export default function App() {
               <button onClick={() => setNotice("")} aria-label="Dismiss notice">
                 <X size={16} />
               </button>
+            </div>
+          )}
+          {connectionError && tab === "acquire" && (
+            <div className="notice-box" role="alert">
+              Device connection failed: {connectionError} Open Check system
+              tools to choose ADB or recover the connection.
             </div>
           )}
           {!caseInfo ? (
@@ -527,6 +559,13 @@ export default function App() {
                       <div className="row">
                         <Button
                           secondary
+                          disabled={disabled}
+                          onClick={() => run(recoverConnection)}
+                        >
+                          <RefreshCw size={15} /> Recover connection
+                        </Button>
+                        <Button
+                          secondary
                           disabled={!serial || disabled}
                           onClick={inspect}
                         >
@@ -536,6 +575,23 @@ export default function App() {
                           USB detection refreshes automatically
                         </span>
                       </div>
+                      {!devices.length && !connectionError && (
+                        <p className="notice-box">
+                          ADB is available but no USB phone is visible. Use
+                          Recover connection, then check the data cable, USB
+                          debugging, and the phone's authorization prompt.
+                        </p>
+                      )}
+                      {devices.some(
+                        (d) =>
+                          d.state === "unauthorized" || d.state === "offline",
+                      ) && (
+                        <p className="notice-box">
+                          An unauthorized phone needs its Allow USB debugging
+                          prompt accepted while unlocked. For an offline phone,
+                          reconnect the cable and use Recover connection.
+                        </p>
+                      )}
                       {profile && (
                         <div className="device-profile">
                           <strong>
@@ -1115,6 +1171,7 @@ export default function App() {
                         ))}
                       </select>
                     </label>
+                    {tools && <p className="notice-box">{tools.aiStatus}</p>}
                     {!tools?.aiModels.length && (
                       <p className="notice-box">
                         Start Ollama on this computer and install a text model.
@@ -1342,6 +1399,99 @@ export default function App() {
           </footer>
         </div>
       </main>
+      {setup && (
+        <div className="modal-overlay">
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="System tools and connections"
+          >
+            <div className="panel-heading">
+              <h2>System tools and connections</h2>
+              <button
+                onClick={() => setSetup(false)}
+                aria-label="Close system tools"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            {error && (
+              <p className="notice-box" role="alert">
+                {error}
+              </p>
+            )}
+            <p className="tool-path">
+              <strong>Android device bridge</strong>
+              <br />
+              {tools?.adb ?? "Checking…"}
+              <br />
+              <code>{tools?.adbPath}</code>
+            </p>
+            <Button
+              secondary
+              disabled={disabled}
+              onClick={() => run(() => chooseTool("adb"))}
+            >
+              Choose ADB executable
+            </Button>
+            <p className="tool-path">
+              <strong>Python artifact parser</strong>
+              <br />
+              {tools?.python ?? "Checking…"}
+              <br />
+              <code>{tools?.pythonPath}</code>
+            </p>
+            <Button
+              secondary
+              disabled={disabled}
+              onClick={() => run(() => chooseTool("python"))}
+            >
+              Choose Python executable
+            </Button>
+            <p className="tool-path">
+              <strong>Local AI status</strong>
+              <br />
+              {tools?.aiStatus ?? "Checking…"}
+            </p>
+            <p className="notice-box">
+              {connectionError ||
+                (devices.length
+                  ? devices.map((d) => `${d.id}: ${d.state}`).join(" · ")
+                  : "No USB device visible. Connect an unlocked phone with USB debugging enabled and accept its authorization prompt.")}
+            </p>
+            <p className="muted small">
+              Recovery restarts the computer's shared ADB service and interrupts
+              other ADB sessions. Finish any other device work first.
+            </p>
+            <Button
+              secondary
+              disabled={disabled}
+              onClick={() => run(recoverConnection)}
+            >
+              Recover connection
+            </Button>
+            <Button
+              secondary
+              disabled={disabled}
+              onClick={() => run(refreshTools)}
+            >
+              Refresh tool status
+            </Button>
+            <Button
+              secondary
+              disabled={disabled}
+              onClick={() =>
+                run(async () => {
+                  await api.diagnostics();
+                })
+              }
+            >
+              Open diagnostic records
+            </Button>
+          </section>
+        </div>
+      )}
       {create && (
         <div className="modal-overlay">
           <form

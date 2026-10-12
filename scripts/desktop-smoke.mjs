@@ -100,6 +100,22 @@ try {
   page.on("pageerror", (error) => errors.push(String(error)));
   await page.getByRole("heading", { name: "Begin with a case" }).waitFor();
   await page
+    .getByRole("button", { name: "Check system tools", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "System tools and connections" })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Choose ADB executable", exact: true })
+    .waitFor();
+  const toolStatus = await page.evaluate(() => window.forensic.tools());
+  assert.ok(toolStatus.adbPath);
+  assert.ok(toolStatus.pythonPath);
+  assert.ok(toolStatus.aiStatus);
+  await page
+    .getByRole("button", { name: "Close system tools", exact: true })
+    .click();
+  await page
     .getByRole("button", { name: "Create a case", exact: true })
     .click();
   await page

@@ -1,22 +1,22 @@
 import { Adb } from "@devicefarmer/adbkit";
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn } from "node:child_process";
 import type { Readable } from "node:stream";
 import { assertReadCommand, probes } from "./policy";
 import { remoteRead } from "./remoteStatus";
 import type { Device, DeviceProfile } from "../../shared/types";
+import { resolveAdbPath } from "../settings";
 
 export function processStream(
   executable: string,
   args: string[],
   signal?: AbortSignal,
 ): { stream: Readable; completion: Promise<void>; stop(): void } {
-  const child: ChildProcessWithoutNullStreams = spawn(executable, args, {
+  const child = spawn(executable, args, {
     shell: false,
     windowsHide: true,
-    stdio: "pipe",
+    stdio: ["ignore", "pipe", "pipe"],
     signal,
   });
-  child.stdin.end();
   let stderr = "";
   let settled = false;
   child.stdout.on("error", () => {});
@@ -82,22 +82,102 @@ export async function collect(
 }
 export class DeviceBridge {
   adbVersion = "unknown";
-  readonly adbPath = process.env.OPENFORENSIC_ADB || "adb";
-  private client = Adb.createClient({
-    bin: this.adbPath,
-    host: "127.0.0.1",
-    port: 5037,
-    timeout: 5000,
-  });
-  async devices(): Promise<Device[]> {
-    this.adbVersion = await collect(this.adbPath, ["version"]);
-    const devices = (await this.client.listDevices()) as {
-      id: string;
-      type: string;
-    }[];
-    return devices
-      .filter((d) => !d.id.includes(":") && !d.id.startsWith("emulator-"))
-      .map((d) => ({ id: d.id, state: d.type }));
+  adbPath: string;
+  private client: ReturnType<typeof Adb.createClient>;
+  private pending: Promise<Device[]> | null = null;
+  private maintenance: Promise<Device[]> | null = null;
+  private initialized = false;
+  lastConnectionError = "";
+  constructor(path = resolveAdbPath()) {
+    this.adbPath = path;
+    this.client = this.createClient();
+  }
+  private createClient() {
+    const client = Adb.createClient({
+      bin: this.adbPath,
+      host: "127.0.0.1",
+      port: 5037,
+      timeout: 5000,
+    });
+    // adbkit forwards late socket errors to this EventEmitter. Without a
+    // listener, a USB/server interruption can terminate the Electron process.
+    client.on("error", (error: Error) => {
+      this.lastConnectionError = error.message;
+    });
+    return client;
+  }
+  async configure(path: string): Promise<void> {
+    if (this.maintenance) await this.maintenance.catch(() => {});
+    if (this.pending) await this.pending.catch(() => {});
+    this.adbPath = path;
+    this.client = this.createClient();
+    this.initialized = false;
+    this.lastConnectionError = "";
+  }
+  devices(): Promise<Device[]> {
+    if (this.maintenance) return this.maintenance;
+    if (!this.pending)
+      this.pending = this.scan().finally(() => {
+        this.pending = null;
+      });
+    return this.pending;
+  }
+  private async scan(): Promise<Device[]> {
+    if (!this.initialized) {
+      this.adbVersion = await collect(this.adbPath, ["version"]);
+      if (!this.adbVersion.startsWith("Android Debug Bridge"))
+        throw new Error("The selected executable is not Android Debug Bridge.");
+      // -H explicitly denotes a remote server to adb, even for loopback;
+      // start-server must use the local form so a stopped daemon can start.
+      await collect(this.adbPath, ["-P", "5037", "start-server"]);
+      this.initialized = true;
+    }
+    let devices: Device[];
+    try {
+      const list = (await this.client.listDevices().timeout(6000)) as {
+        id: string;
+        type: string;
+      }[];
+      devices = list.map((d) => ({ id: d.id, state: d.type }));
+    } catch (error) {
+      this.lastConnectionError =
+        error instanceof Error ? error.message : String(error);
+      // Recover from a lost/stale adbkit socket using a bounded CLI request.
+      await collect(this.adbPath, ["-P", "5037", "start-server"]);
+      devices = parseDeviceList(
+        await collect(this.adbPath, [
+          "-H",
+          "127.0.0.1",
+          "-P",
+          "5037",
+          "devices",
+          "-l",
+        ]),
+      );
+    }
+    this.lastConnectionError = "";
+    return devices.filter(
+      (d) => !d.id.includes(":") && !d.id.startsWith("emulator-"),
+    );
+  }
+  restart(): Promise<Device[]> {
+    if (!this.maintenance)
+      this.maintenance = (async () => {
+        if (this.pending) await this.pending.catch(() => {});
+        await collect(this.adbPath, [
+          "-H",
+          "127.0.0.1",
+          "-P",
+          "5037",
+          "kill-server",
+        ]);
+        this.initialized = false;
+        this.client = this.createClient();
+        return await this.scan();
+      })().finally(() => {
+        this.maintenance = null;
+      });
+    return this.maintenance;
   }
   async ready(serial: string): Promise<void> {
     const d = (await this.devices()).find((d) => d.id === serial);
@@ -214,4 +294,14 @@ export class DeviceBridge {
       .filter((n) => /^[A-Za-z0-9_.-]+$/.test(n))
       .map((n) => `/dev/block/by-name/${n}`);
   }
+}
+
+export function parseDeviceList(output: string): Device[] {
+  return output.split(/\r?\n/).flatMap((line) => {
+    const match =
+      /^([^\s]+)\s+(device|offline|unauthorized|recovery|sideload|bootloader|no permissions)(?:\s|$)/.exec(
+        line,
+      );
+    return match ? [{ id: match[1], state: match[2] }] : [];
+  });
 }

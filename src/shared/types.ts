@@ -104,8 +104,19 @@ export interface AiResult {
   createdUtc: string;
   truncated: boolean;
 }
+export interface ToolStatus {
+  adb: string;
+  python: string;
+  adbPath: string;
+  pythonPath: string;
+  aiModels: string[];
+  aiStatus: string;
+}
 export interface DesktopAPI {
-  tools(): Promise<{ adb: string; python: string; aiModels: string[] }>;
+  tools(): Promise<ToolStatus>;
+  selectTool(name: "adb" | "python"): Promise<boolean>;
+  restartBridge(): Promise<Device[]>;
+  diagnostics(): Promise<string>;
   devices(): Promise<Device[]>;
   inspect(serial: string): Promise<DeviceProfile>;
   blocks(serial: string): Promise<string[]>;

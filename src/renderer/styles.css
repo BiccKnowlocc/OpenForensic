@@ -989,6 +989,19 @@ audio {
 .modal .button {
   width: 100%;
 }
+.modal {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.tool-path {
+  overflow-wrap: anywhere;
+  margin: 16px 0 10px;
+  font-size: 13px;
+}
+.tool-path code {
+  color: #94a3b8;
+  font-size: 11px;
+}
 .spin {
   animation: spin 1s linear infinite;
 }

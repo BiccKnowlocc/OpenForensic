@@ -2,7 +2,7 @@
 
 An open-source, local Android evidence acquisition and communications examination desktop application. Electron owns device access and case storage; a sandboxed React interface provides acquisition monitoring, searchable conversations, candidate recovery inspection, local AI assistance, and report export.
 
-**Release status: executable developer preview, 0.1.0.** The build includes working acquisition, integrity, parsing, UI, and AI paths. It is not a validated replacement for a commercial forensic suite. Real-device validation, independent examiner review, signed installers, and the unresolved upstream dependency advisory described in [SECURITY.md](SECURITY.md) are release gates before operational casework.
+**Release status: executable developer preview, 0.1.1.** The build includes working acquisition, integrity, parsing, UI, and AI paths. It is not a validated replacement for a commercial forensic suite. Real-device validation, independent examiner review, signed installers, and the unresolved upstream dependency advisory described in [SECURITY.md](SECURITY.md) are release gates before operational casework.
 
 ## Run
 
@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-For installations where executable paths are not on PATH, set them in the terminal that starts the application:
+Use **Check system tools → Choose ADB executable / Choose Python executable** to save executable locations across launches. The device bridge also detects standard Android SDK locations and `C:\Android\platform-tools\adb.exe`. Environment overrides remain available for managed installations:
 
 ```powershell
 $env:OPENFORENSIC_ADB = 'C:\Android\platform-tools\adb.exe'
@@ -32,6 +32,12 @@ npm run dist
 `package` produces an unpacked desktop application; `dist` produces the platform installer. macOS signing/notarization and Windows signing require operator-provided release credentials. Run platform packaging on the corresponding platform.
 
 On Windows the evaluation executable is `release/win-unpacked/OpenForensic.exe`. Keep the entire `win-unpacked` folder together. The build uses the Electron distribution already installed in `node_modules/electron/dist`, which avoids a second download and archive staging rename. Host Python and Android platform tools are still required for their corresponding functions.
+
+## Connection troubleshooting
+
+Open **Check system tools** to see the executable paths, live device states, and Ollama cloud status. ADB errors remain visible instead of appearing as an empty device list. **Recover connection** restarts the local ADB service; it is unavailable during acquisition/processing and interrupts other programs' ADB sessions. Unlock the phone and accept its USB debugging prompt. An unauthorized phone requires that prompt; an empty list can also indicate a cable or driver problem. Device scanning is bounded and shared between callers, and socket errors are handled without terminating the app.
+
+**Open diagnostic records** opens local application error logs. Native crash reports are saved locally with upload disabled. These files can contain paths and device identifiers; review them before sharing. Original case evidence is kept in the chosen case folders, separate from tool settings and diagnostics. Reopen and verify any case that was active during an unexpected exit; an interrupted acquisition is not a complete capture.
 
 ## Examination workflow
 

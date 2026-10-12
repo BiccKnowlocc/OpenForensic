@@ -4,6 +4,14 @@ Tests generate synthetic material. They do not acquire an examiner's phone or es
 
 ## Local validation snapshot — 2026-10-11
 
+### Connection repair preview 0.1.1 — 2026-10-12
+
+The user's Samsung S24 Ultra was visible to Windows but absent from ADB's device list. Restarting the host ADB daemon restored an authorized USB transport. This confirms device detection only; no new content capture or recovery was performed during troubleshooting. The old app did not retain crash diagnostics, so the specific cause of its earlier exit cannot be proved. Inspection found an unhandled adbkit client error path that could terminate Electron, and executable paths set only in a launch terminal could be lost on reopening.
+
+The repair handles forwarded socket errors, shares and bounds scans, starts the daemon using ADB's required local syntax, provides explicit connection recovery, detects standard SDK locations, persists selected tool locations, and retains local diagnostics. Five added regression tests cover late socket errors, missing/failed/hung tools, CLI transport states, and saved settings. Desktop smoke also exercises the system tools panel. Live Ollama status was checked as cloud disabled after the user restarted the service. Model inference was not exercised.
+
+TypeScript checking, the production build, all 12 TypeScript tests, and the complete desktop workflow passed for this repair. Windows packaging passed, followed by the same full workflow against the packaged executable. An additional isolated packaged-app check passed for v0.1.1, automatic ADB location, saving the executable through native IPC, restarting the host daemon, concurrent device scans, and live cloud-disabled Ollama status. Existing evidence and case folders were not modified during troubleshooting. The native SQLite/parser/case integration passed; its synthetic AI endpoint checks were skipped locally because the user's real Ollama service occupied port 11434.
+
 - Windows x64, Node.js 26.7.0, Python 3.14.7, Electron 44.7.0.
 - TypeScript checking and production Vite builds passed.
 - Seven TypeScript unit tests and thirteen Python engine tests passed.

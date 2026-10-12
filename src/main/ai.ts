@@ -6,6 +6,22 @@ import { ftsLiteral } from "../db";
 import type { AiResult, Message } from "../shared/types";
 
 const BASE = "http://127.0.0.1:11434";
+export async function localAiStatus(): Promise<string> {
+  const response = await fetch(`${BASE}/api/status`, {
+    signal: AbortSignal.timeout(3000),
+    redirect: "error",
+  });
+  if (!response.ok)
+    throw new Error(
+      "Ollama cannot confirm local-only mode. Update Ollama before using evidence AI.",
+    );
+  const body = z
+    .object({ cloud: z.object({ disabled: z.boolean() }) })
+    .parse(await response.json());
+  return body.cloud.disabled
+    ? "Cloud features disabled; local-only mode confirmed."
+    : "Cloud features are still enabled in the running Ollama service. Save OLLAMA_NO_CLOUD=1, fully quit Ollama from its tray icon, then restart it.";
+}
 export async function models(): Promise<string[]> {
   const response = await fetch(`${BASE}/api/tags`, {
     signal: AbortSignal.timeout(3000),

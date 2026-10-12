@@ -4,6 +4,9 @@ const invoke = (channel: string, ...args: unknown[]) =>
   ipcRenderer.invoke(`forensic:${channel}`, ...args);
 const api: DesktopAPI = {
   tools: () => invoke("tools"),
+  selectTool: (name) => invoke("select-tool", name),
+  restartBridge: () => invoke("restart-bridge"),
+  diagnostics: () => invoke("diagnostics"),
   devices: () => invoke("devices"),
   inspect: (serial) => invoke("inspect", serial),
   blocks: (serial) => invoke("blocks", serial),
