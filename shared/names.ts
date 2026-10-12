@@ -6,18 +6,48 @@ export function partyName(bundle: CaseBundle, id: string): string {
   return contact?.name ?? id;
 }
 
-export function formatUtc(iso: string): string {
+const EASTERN = "America/New_York";
+
+export function formatEastern(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "UTC",
+  const when = new Intl.DateTimeFormat("en-GB", {
+    timeZone: EASTERN,
     year: "numeric",
     month: "short",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
-  }).format(date) + " UTC";
+  }).format(date);
+  return `${when} ${easternAbbrev(date)}`;
+}
+
+function easternAbbrev(date: Date): string {
+  const shortName = timeZonePart(date, "short");
+  if (shortName === "EST" || shortName === "EDT") return shortName;
+  const longName = timeZonePart(date, "long");
+  if (longName.includes("Daylight")) return "EDT";
+  if (longName.includes("Standard")) return "EST";
+  return shortName || longName;
+}
+
+function timeZonePart(date: Date, timeZoneName: "short" | "long"): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: EASTERN,
+    timeZoneName,
+  }).formatToParts(date).find((part) => part.type === "timeZoneName")?.value ?? "";
+}
+
+export function easternDateKey(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: EASTERN,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }
 
 export function threadTitle(bundle: CaseBundle, threadId: string): string {

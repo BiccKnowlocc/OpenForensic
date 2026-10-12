@@ -18,7 +18,7 @@ export function Timeline({ bundle }: { bundle: CaseBundle }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted">{rows.length} events · times in UTC</p>
+        <p className="text-sm text-muted">{rows.length} events · US Eastern, EDT or EST</p>
         <Button variant="outline" size="sm" onClick={() => setNewest((value) => !value)}>{newest ? "Oldest first" : "Newest first"}</Button>
       </div>
       <ol className="relative space-y-4 border-l border-line pl-4">
