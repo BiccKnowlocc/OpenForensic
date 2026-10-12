@@ -4,7 +4,8 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type { DeviceFingerprint } from "../../shared/types";
+import { buildDevicePosture } from "../../shared/devicePosture";
+import type { DeviceFingerprint, DevicePosture } from "../../shared/types";
 import { classifyAdbFailure, type FailureKind } from "./classify";
 import { createHashTransform, type Digests } from "./hashStream";
 
@@ -103,6 +104,34 @@ export async function fingerprintDevice(serial: string): Promise<DeviceFingerpri
     rooted: /\buid=0\b/.test(id),
     state: "device",
   };
+}
+
+async function propOrBlank(serial: string, name: string): Promise<string> {
+  try {
+    const result = await runAdb(["-s", serial, "shell", "getprop", name], 8000);
+    if (result.code !== 0) return "";
+    return result.stdout.trim();
+  } catch {
+    return "";
+  }
+}
+
+export async function readDevicePosture(serial: string): Promise<DevicePosture> {
+  const [model, android, securityPatch, cryptoState, cryptoType] = await Promise.all([
+    propOrBlank(serial, "ro.product.model"),
+    propOrBlank(serial, "ro.build.version.release"),
+    propOrBlank(serial, "ro.build.version.security_patch"),
+    propOrBlank(serial, "ro.crypto.state"),
+    propOrBlank(serial, "ro.crypto.type"),
+  ]);
+  let lockSettings = "";
+  try {
+    const dumped = await runAdb(["-s", serial, "shell", "dumpsys", "lock_settings"], 8000);
+    if (dumped.code === 0) lockSettings = dumped.stdout;
+  } catch {
+    lockSettings = "";
+  }
+  return buildDevicePosture({ serial, model, android, securityPatch, cryptoState, cryptoType, lockSettings });
 }
 
 export function watchDevice(serial: string, onLost: () => void, intervalMs = 2000): () => void {
