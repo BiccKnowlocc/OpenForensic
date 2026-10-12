@@ -1,0 +1,13 @@
+node_modules/
+out/
+dist/
+release/
+__pycache__/
+*.pyc
+.venv/
+coverage/
+*.log
+cases/
+.env
+artifacts/
+build-checks/

@@ -1,117 +1,54 @@
 # OpenForensic architecture
 
-OpenForensic is a local examiner app for authorized Android acquisition. It runs on the examiner's machine, talks to the phone only over a user-authorized adb session (or an already-rooted phone the operator controls), and keeps case evidence on that machine.
-
-## Boundaries
-
-- Acquisition only after the phone user has authorized USB debugging, or the phone is already rooted and in the operator's control.
-- No exploit root, no lock-screen or file-based encryption bypass, and no covert implant.
-- Deleted data means SQLite freelist and WAL records, plus unallocated carving only on an image already acquired under that model. A full dump of every deleted byte from a locked encrypted phone is out of scope.
-- The case database is local SQLite with FTS5. MongoDB is not part of this design unless the user later overrides it.
-
-## Stack
-
-| Layer | Choice |
-| --- | --- |
-| Shell | Electron |
-| UI | React, Tailwind |
-| Bundler | Vite |
-| Device I/O | Node `adbkit` plus `child_process` streams |
-| Hashes | Node `crypto` Transform (MD5 and SHA-256) while bytes are written to disk |
-| Parsers | Python 3 |
-| Case database | Local SQLite FTS5 (`case_store.db`) |
-
-## Pipeline
-
-Extraction, parsing, and UI stay separate. The phone path is read-only. Hashes are computed on the write stream. The audit log is append-only JSON.
+The examiner machine owns acquisition, storage, parsing, and inference. The renderer has no Node integration, filesystem access, shell execution, or arbitrary IPC. The preload exposes fixed methods, each checked by the main process against a runtime schema and the originating top-level window.
 
 ```mermaid
 flowchart TD
-  phone["Phone: USB debugging authorized by the user, or already rooted and in operator control"]
-  adb["src/main adb client: detect, fingerprint, heartbeat"]
-  logical["Logical extract: SMS, call log, contacts, shared media"]
-  physical["Physical block stream: only if su already works"]
-  hash["hashStream: MD5 + SHA-256 Transform while writing"]
-  casebox["Case folder: raw files, evidence_manifest.json, immutable audit log"]
-  engine["src/engine: parser bridge, telephony parsers, SQLite WAL and freelist carver"]
-  db["src/db: case_store.db SQLite FTS5"]
-  ui["src/renderer: ExtractionMonitor, TimelineView, ChatViewer"]
-  stop["Stop and record the error. No bypass."]
-
-  phone -->|"read-only adb"| adb
-  adb --> logical
-  adb -.->|"later, su already present"| physical
-  logical --> hash
-  physical --> hash
-  hash --> casebox
-  casebox --> engine
-  engine --> db
-  db --> ui
-  adb -->|"USB loss, permission denial, or encrypted partition"| stop
-  logical --> stop
-  physical --> stop
+  Device[Authorized Android USB device] --> Bridge[adbkit inventory and restricted read commands]
+  Bridge --> Logical[Provider responses and live tar archives]
+  Bridge --> Physical[Existing-root raw block stream]
+  Logical --> Status[Validate and remove remote completion trailer]
+  Physical --> Status
+  Status --> Hash[SHA-256 and MD5 Transform with backpressure]
+  Hash --> Evidence[Exclusive durable evidence file]
+  Evidence --> Verify[Readback hash and physical size verification]
+  Verify --> Custody[Evidence register and custody event chain]
+  Evidence --> Copy[Verified working copy with acquired WAL companions]
+  Copy --> Python[Bounded Python worker]
+  Python --> Live[Explicit communications adapters]
+  Python --> Carver[Freelist, unallocated bytes and checksum-valid WAL]
+  Live --> DB[Local SQLite and FTS5]
+  Carver --> Candidates[Candidate table with offsets and uncertainty]
+  DB --> UI[Sandboxed React examiner dashboard]
+  Candidates --> UI
+  DB --> AI[Local-only Ollama preflight and cited drafts]
+  AI --> Runs[Recorded prompts, sources and response digests]
+  Custody --> Seal[Manifest, audit head and database digest]
+  DB --> Report[Escaped HTML and Electron PDF export]
 ```
 
-## Directory map
+## Device boundary
 
-This is the planned tree. It is not a second task list. `physical.ts` and the carver are later work; they sit in the tree so the v1 scaffold has a place to grow.
+Only fixed reads and tightly validated block commands can pass the command policy. There is no arbitrary shell channel, device push, install, delete, settings change, `adb root`, exploit, or encryption bypass. A randomized completion trailer carries remote exit status through `exec-out`; its bytes never enter the evidence payload. Existing root is detected as either a root shell or `su`.
 
-```text
-.cursorrules
-TODO.md
-ARCHITECTURE.md
-package.json
-src/main
-  index.ts
-  adb/client.ts
-  logical.ts
-  physical.ts
-  integrity/hashStream.ts
-  manifest.ts
-src/engine
-  parser_bridge.ts
-  carver_sqlite.py
-  parse_telephony.py
-  schemas.py
-src/db
-  index.ts
-  schema.sql
-  queries.ts
-src/renderer
-  App.tsx
-  ExtractionMonitor
-  TimelineView
-  ChatViewer
-  caseStore
-```
+The policy prevents application-issued target writes. It does not stop live Android services or acquisition-triggered logs. Logical app archives can contain inconsistent database/WAL snapshots because a running application can write during capture. These facts are recorded and surfaced.
 
-## Chain of custody
+## Evidence and case boundary
 
-- The adb client does not write to the phone. Content queries and file pulls are reads.
-- `integrity/hashStream.ts` hashes each byte stream with MD5 and SHA-256 in a Transform as the file is written. Hashes are stored in `evidence_manifest.json`, not computed from a second read after the fact.
-- `evidence_manifest.json` records device ids, timestamps, operator, source paths, and hashes.
-- The audit log is immutable JSON: each event is appended. The UI does not rewrite earlier lines.
-- Case folders support create, open, and archive. Archive does not delete the manifest or the log.
+Acquisition writes originals using exclusive creation, durable file handles, stream hashes, and disk readback checks. Interrupted sources retain partial bytes and their disk hashes. The manifest records complete/partial status. An evidence hash is never substituted for proof of identity or provenance.
 
-## Modules
+The SQLite case database stores original-item references, normalized messages, carved candidates, auxiliary artifacts, parser runs, AI runs, and derivative hashes. All SQL inputs from the renderer are bounded and parameterized. FTS queries quote user tokens. Original evidence and analysis derivatives have separate paths and integrity registers.
 
-- `src/main` owns the Electron process, adb, logical extract, the later physical stream, hashing, and the manifest.
-- `src/engine` owns parsing. Node calls Python through `parser_bridge.ts`. Parsers for telephony, WhatsApp, and Messenger run only when that database and its key are already in the acquisition. There is no crypt breaker.
-- `src/db` owns `case_store.db`. Normalized message rows use `timestamp_utc`, `platform`, `sender_id`, `receiver_id`, `message_text`, `media_path`, and `is_deleted_flag`, with an FTS5 index for search.
-- `src/renderer` owns the live extraction monitor, the timeline, and the chat thread viewer. It reads the case store. It does not talk to adb.
+Audit events use deterministic JSON serialization and a SHA-256 previous-event chain. The application verifies the chain before every append and flushes writes. Sealing freezes mutations, checkpoints SQLite, and creates a manifest containing a database digest and audit head. Host administrators can replace local files; independent preservation of the seal is required to make tampering externally detectable.
 
-## Failure handling
+## Parser boundary
 
-USB disconnect, permission denial, and encrypted partitions stop the operation and append an error to the audit log.
+The Python subprocess receives only a verified working copy. Archive extraction rejects absolute/parent paths, links, device entries, duplicate output files, and oversized members. Output rows, total bytes, file counts, candidate counts, and runtime are bounded. Typed JSONL is ingested transactionally; unknown or malformed output rolls back ingestion. Original and derivative hashes are retained.
 
-- Heartbeat: if the USB device disappears, extraction stops and the partial files already hashed stay in the case folder with the error recorded.
-- Permission denial: if an adb content query or pull is rejected, that source is marked failed. The app does not retry through another privilege path.
-- Encrypted partition: if a read hits file-based encryption or another locked volume, the stream stops. The error is recorded. There is no lock-screen bypass and no encryption bypass.
+Live adapters make explicit assumptions about supported schemas and timestamp units. Protobuf wire decoding supplies numbered fields only. SQLite carving supplies candidates only; it never silently maps heuristic bytes into verified message text, participants, timestamps, or deletion events. WAL frames must pass salt and rolling-checksum validation; commitment is determined by a valid subsequent commit marker.
 
-## Deployment
+## AI and report boundary
 
-USB acquisition cannot run on Netlify. The examiner machine is the only place adb, the case folder, and `case_store.db` exist.
+The main process retrieves a bounded set of source rows, checks Ollama's local-only status and model metadata, and calls a loopback endpoint with redirects disabled. No model tools are supplied. Evidence text is treated as untrusted prompt data. The application rejects missing or out-of-scope citations, retains the full prompt/response and source snapshot digest, and labels drafts for examiner review. Valid IDs do not guarantee valid statements.
 
-Netlify can host a documentation or landing site later. That site does not receive evidence, manifests, or audit logs.
-
-MongoDB Atlas is not used. The case database stays in local SQLite unless the user later overrides that choice.
+Reports escape all evidence and AI text. Exported HTML has a restrictive CSP; PDF rendering uses a hidden sandboxed Electron window. Media uses per-case capability URLs, restricted extensions, verified derivative hashes, and resolved path containment. Device sanitization is backlog work in a separate destructive workflow and cannot enter this acquisition allowlist.

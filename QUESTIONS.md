@@ -1,10 +1,10 @@
 # Scope questions
 
-Reply in the OpenForensic project chat with the number and your answer.
+The current build follows the supplied Electron/Android/local-SQLite scope and remains under BiccKnowlocc/OpenForensic. These questions now track deployment and validation decisions; they did not block scaffolding.
 
-1. Examiner computer: Windows, Mac, Linux, or all three?
-2. Test phone: yes or no, and rooted or not?
-3. GitHub: keep this repo under BiccKnowlocc, or name an organization?
-4. Netlify: docs page, or a web case viewer in v1?
-5. Database: local SQLite, or MongoDB Atlas?
-6. v1: SMS, calls, contacts, shared media, hashes, timeline, and chat view — yes or no?
+1. Which examiner OS versions must be supported for the validated release? Windows is the local development/test platform; macOS/Linux configuration is supplied.
+2. Which authorized stock and existing-root test phones/tablets are available for reference acquisitions?
+3. Which independent examiner will assess recovery false positives, parser coverage, and custody procedures?
+4. If a documentation site is requested later, which host should serve it? Evidence and USB acquisition currently remain local.
+5. Which release signing and externally preserved seal/checkpoint process should be used?
+6. Which local Ollama model and hardware should be used for AI validation?
