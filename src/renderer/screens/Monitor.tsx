@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { describeAcquisition, type AcquisitionStatus } from "../../../shared/acquisitionEstimate";
-import type { CaseBundle, DeviceStatus, ExtractEvent, SourceStatus } from "../../../shared/types";
+import { savedFromManifest } from "../../../shared/savedFiles";
+import type { CaseBundle, DevicePosture, DeviceStatus, ExtractEvent, SavedFile, SourceStatus } from "../../../shared/types";
 import { formatEastern } from "../../../shared/names";
 import { useApi } from "../api-context";
 import { Badge } from "../components/ui/badge";
@@ -8,6 +9,7 @@ import { Button } from "../components/ui/button";
 import { Dialog, DialogContent } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { ErrorBlock } from "./states";
+import { MediaShelf } from "./MediaShelf";
 
 const SOURCE_IDS = [
   { id: "sms", label: "SMS", path: "content://sms" },
@@ -36,6 +38,7 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
     startedAt: null,
     elapsedMs: 0,
   });
+  const [partialSaved, setPartialSaved] = useState<SavedFile[] | null>(null);
 
   async function refreshDevice() {
     setDeviceError(null);
@@ -75,11 +78,13 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
           elapsedMs: current.startedAt ? Date.now() - current.startedAt : current.elapsedMs,
         }));
       }
+      if (event.partial) setPartialSaved(event.saved ?? []);
       if (event.type === "error" || event.status === "stopped") {
         setClock((current) => freezeClock(current, "stopped"));
         setBanner(event.message);
       }
       if (event.type === "done") {
+        setPartialSaved(null);
         setClock((current) => freezeClock(current, "done"));
         setBanner(event.message);
       }
@@ -147,6 +152,7 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
   }
 
   const tone = (status: SourceStatus) => status === "failed" || status === "stopped" ? "danger" : status === "hashed" ? "moss" : status === "reading" ? "sea" : "muted";
+  const saved = partialSaved ?? (bundle.manifest.acquisition === "partial" ? savedFromManifest(bundle.manifest) : null);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -170,6 +176,7 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
             </ul>
           </div>
         ) : null}
+        {device?.posture ? <PostureCard posture={device.posture} /> : null}
         <Button onClick={() => void extract()} disabled={running || bundle.summary.sample || bundle.summary.status === "archived"}>
           {running ? "Extracting…" : "Start logical extraction"}
         </Button>
@@ -223,6 +230,27 @@ export function Monitor({ bundle, onChange }: { bundle: CaseBundle; onChange: ()
             );
           })}
         </ul>
+        {saved ? (
+          <div className="rounded border border-danger/50 p-3">
+            <h3 className="text-sm font-medium text-danger">Partial pull</h3>
+            <p className="mt-1 text-xs leading-5 text-muted">The USB link dropped. Files already hashed stay in the case. The pull is not complete.</p>
+            {saved.length === 0 ? <p className="mt-2 text-xs text-muted">Nothing had been hashed yet.</p> : (
+              <ul className="mt-2 space-y-2 font-mono text-[11px]">
+                {saved.map((item) => (
+                  <li key={item.localPath}>
+                    <span className="text-paper">{item.sourcePath}</span>
+                    <span className="mt-1 block text-muted">{formatEastern(item.acquiredAt)} · {item.bytes} bytes · {item.sha256}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="space-y-3 rounded-md border border-line bg-panel p-4 lg:col-span-2">
+        <h2 className="font-serif text-2xl">Saved media</h2>
+        <MediaShelf bundle={bundle} />
       </section>
 
       <section className="space-y-2 rounded-md border border-line bg-panel p-4 lg:col-span-2">
@@ -266,6 +294,32 @@ function freezeClock(current: AcquisitionClock, status: "done" | "stopped"): Acq
   if (current.status !== "running" && current.status !== "idle") return current;
   const elapsedMs = current.startedAt ? Date.now() - current.startedAt : current.elapsedMs;
   return { ...current, status, elapsedMs };
+}
+
+function PostureCard({ posture }: { posture: DevicePosture }) {
+  const rows = [
+    ["Model", posture.model],
+    ["Android", posture.android],
+    ["Security patch", posture.securityPatch],
+    ["Encryption", posture.encryption],
+    ["Credential", posture.credential === "set" ? "Set" : posture.credential === "not set" ? "Not set" : "Not reported"],
+  ];
+  return (
+    <div className="rounded border border-line p-3">
+      <h3 className="text-sm font-medium">Device posture</h3>
+      <p className="mt-1 text-xs leading-5 text-muted">
+        Read-only. These are getprop and dumpsys facts the phone already returns after USB debugging is authorized. A missing fact stays “not reported.”
+      </p>
+      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt className="text-[11px] uppercase tracking-wide text-muted">{label}</dt>
+            <dd className="mt-1 font-mono text-xs text-paper">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 function AcquisitionStrip({ clock }: { clock: AcquisitionClock }) {
