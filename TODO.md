@@ -50,7 +50,9 @@ Implementation checklist for a local examiner workstation. Checked items have co
 
 ## Requested follow-up: device sanitization
 
-- [ ] Design a separate, explicitly destructive sanitization workflow for operator-owned or otherwise authorized phones and tablets, outside evidence acquisition and active case examination.
-- [ ] Evaluate free-space filling with junk files against platform-supported cryptographic erase and reset procedures. Document flash wear leveling, encryption, TRIM, reserved storage, and verification limits before selecting a method.
-- [ ] Define supported platforms, scope, power-loss behavior, operator confirmation, audit receipt, and independent validation. Never claim guaranteed deleted-data destruction from free-space filling alone.
-- [ ] Build only after the current acquisition, parsing, triage, and AI work is completed. This request is backlog scope; no device sanitization is implemented in the acquisition command policy.
+- [x] Separate authorized-device sanitization section below Integrity & custody, outside an open evidence case.
+- [x] Preserve-data workflow with generated temporary files, storage reserve, power/heat checks, size/hash readback, cancellation, reconnect cleanup, confirmation, and independent receipts.
+- [x] Document flash, private database, reserve, and copy coverage limits; permanent deletion is always reported as unverified.
+- [ ] Independent Android hardware validation, including existing-file preservation and interrupted-device cleanup on each supported build.
+- [ ] Manufacturer reset/cryptographic erase qualification for a future explicitly selected full-device disposal mode. The current user requirement preserves existing data, so this release provides no factory reset.
+- [ ] Guaranteed deletion of all former contents while preserving all current data is not achievable through ordinary Android free-space writes; do not claim this capability.

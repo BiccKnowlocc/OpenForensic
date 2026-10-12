@@ -1002,6 +1002,62 @@ audio {
   color: #94a3b8;
   font-size: 11px;
 }
+.sanitize-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border-color: #b88946;
+  margin-bottom: 22px;
+}
+.sanitize-warning svg {
+  flex-shrink: 0;
+  color: #eab86a;
+}
+.sanitize-warning p {
+  margin: 7px 0 0;
+}
+.sanitization > .panel {
+  margin-bottom: 20px;
+}
+.sanitize-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+}
+.sanitize-check input {
+  width: auto;
+  margin-top: 4px;
+}
+.sanitize-button {
+  background: #a76c28;
+}
+.sanitize-job {
+  padding: 18px 0;
+  border-bottom: 1px solid #293445;
+}
+.sanitize-job progress {
+  width: 100%;
+  accent-color: #d0a367;
+}
+.sanitize-job dl {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 7px;
+  font-size: 12px;
+}
+.sanitize-job dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.sanitize-job dt {
+  color: #94a3b8;
+}
+.sanitize-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .spin {
   animation: spin 1s linear infinite;
 }

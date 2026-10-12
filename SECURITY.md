@@ -13,7 +13,7 @@ OpenForensic uses adbkit for local ADB device inventory. It does not expose adbk
 ## Controls implemented
 
 - Sandboxed, context-isolated renderer without Node integration; fixed preload methods, top-level sender validation, and runtime IPC schemas.
-- Read-command allowlist; no generic device shell or write channel.
+- Acquisition read-command allowlist; no generic renderer device shell or write channel. Separate, operator-confirmed sanitization permits only generated temporary paths, exclusive creation, ownership-checked cleanup, and bounded streaming; it refuses an open evidence case and never resets or writes raw blocks.
 - Original file exclusive creation, streaming SHA-256/MD5, durable writes, readback comparison, and partial-source classification.
 - Resolved path containment and media extension restrictions; verified working derivatives.
 - Bounded Python parser output and execution; archive traversal, links, duplicates, and excessive extraction rejected; XML DTD/entities rejected.

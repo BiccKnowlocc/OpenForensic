@@ -2,7 +2,7 @@
 
 An open-source, local Android evidence acquisition and communications examination desktop application. Electron owns device access and case storage; a sandboxed React interface provides acquisition monitoring, searchable conversations, candidate recovery inspection, local AI assistance, and report export.
 
-**Release status: executable developer preview, 0.1.1.** The build includes working acquisition, integrity, parsing, UI, and AI paths. It is not a validated replacement for a commercial forensic suite. Real-device validation, independent examiner review, signed installers, and the unresolved upstream dependency advisory described in [SECURITY.md](SECURITY.md) are release gates before operational casework.
+**Release status: executable developer preview, 0.1.2.** The build includes acquisition, integrity, parsing, UI, AI, and a separate best-effort shared-storage cleanup workflow. It is not a validated replacement for a commercial forensic suite. Real-device validation, independent examiner review, signed installers, and the unresolved upstream dependency advisory described in [SECURITY.md](SECURITY.md) are release gates before operational casework.
 
 ## Run
 
@@ -48,6 +48,16 @@ Open **Check system tools** to see the executable paths, live device states, and
 5. Alternatively, import plaintext SQLite databases, Messenger JSON exports, normalized message exports, XML, Protobuf wire files, or tar archives. Database `-wal` and `-shm` companions are automatically imported when present. Import a database and its WAL from the same acquisition, not unrelated live snapshots.
 6. Select **Parse & carve** in the evidence register. Parsing occurs in a verified working copy. Examine live communications in Conversations and raw candidates in Recovered candidates. Re-parsing does not duplicate normalized records.
 7. Verify the case and export an examiner report as HTML or PDF. Optionally use the local AI assistant. Seal after all intended analysis; a sealed case supports verification and report export, while new acquisition, parsing, and AI runs are blocked.
+
+## Device sanitization while retaining existing files
+
+**Device sanitization** sits below **Integrity & custody**. This release provides a best-effort free-space exercise for an authorized, unlocked Android USB device. It is not a guaranteed permanent deleted-data wipe, a factory reset, or a NIST clear/purge certificate. [NIST SP 800-88 Rev. 2](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-88r2.pdf) explains why flash remapping and spare cells prevent ordinary overwrite interfaces from reaching all previous contents. Current user files cannot be retained while honestly promising complete destruction of every deleted copy by this method.
+
+Close the evidence case first. Select the device and a temporary-write limit, assess storage and power, record the operator/authority, type the device serial, acknowledge backup and coverage limits, and confirm the native dialog. Begin with a small limit when validating a device model. At least 2 GiB or 5% of total storage remains available, plus a transfer margin. The phone must be powered, at least 30% charged, and cooler than 42°C. The absolute run cap is 512 GiB.
+
+The separate transport creates an exclusive job directory on primary emulated shared storage and streams random bytes into 64 MiB files with exclusive creation and fsync. Each file is verified by size and SHA-256 readback before counting it as verified. Existing files are not selected for deletion. The directory carries a job ownership marker; cleanup validates canonical paths, rejects symlinks, removes only recorded temporary file names, and removes the directory only when empty apart from that marker. There is no recursive delete, raw-device write, root request, reset, or arbitrary write command API.
+
+Stop requests remove the temporary files. USB loss retains a durable checkpoint and a reconnect cleanup action for the same identified device. Operation receipts and hash-chained logs live outside case folders and can be exported as JSON with a SHA-256 companion. They verify recorded activity and temporary-file readback, not destruction of previous deleted contents. Private app databases/WALs, reserved/remapped flash, SD cards, cloud backups, and copies on other devices are excluded. Android may independently clear caches or modify its data under storage pressure; keep a current backup.
 
 ## AI assistance
 
@@ -123,6 +133,9 @@ src/main/case.ts             Case lifecycle, verification, manifest sealing
 src/main/integrity/hashStream.ts  Streaming SHA-256/MD5 and durable writes
 src/main/integrity/audit.ts   Canonical custody event hash chain
 src/main/ai.ts               Local-only retrieval, inference, citations, provenance
+src/main/sanitization/policy.ts  Generated temporary paths and storage/power limits
+src/main/sanitization/transport.ts  Binary random streaming and ownership-checked cleanup
+src/main/sanitization/service.ts  Confirmation plans, checkpoints, recovery, audit receipts
 src/main/report.ts           Escaped, source-linked examiner HTML report
 src/db/schema.sql            Evidence, communications, FTS5, recovery, derivative, AI tables
 src/db/index.ts              SQLite storage and parameterized queries
@@ -134,6 +147,7 @@ src/engine/formats.py        SharedPreferences XML and Protobuf wire decoding
 src/renderer/index.html      Restrictive content security policy
 src/renderer/main.tsx        React entry point
 src/renderer/App.tsx         Acquisition, conversation, recovery, AI, and custody dashboard
+src/renderer/Sanitization.tsx  Separate preserve-data cleanup dashboard
 src/renderer/styles.css      Tailwind import and desktop visual design
 tests/hashStream.test.ts     Durable streaming and interruption tests
 tests/policy.test.ts         Device policy, custody tampering, and path boundary tests

@@ -122,6 +122,22 @@ try {
     .getByRole("button", { name: "Close system tools", exact: true })
     .click();
   await page
+    .getByRole("button", { name: "Device sanitization", exact: true })
+    .click();
+  await page
+    .getByRole("heading", { name: "Free-space cleanup", exact: true })
+    .waitFor();
+  assert.ok(
+    (await page.locator(".sanitize-warning").textContent()).includes(
+      "cannot guarantee",
+    ),
+  );
+  assert.deepEqual(
+    await page.evaluate(() => window.forensic.sanitizationJobs()),
+    [],
+  );
+  await page.getByRole("button", { name: "Acquisition", exact: true }).click();
+  await page
     .getByRole("button", { name: "Create a case", exact: true })
     .click();
   await page
@@ -191,6 +207,45 @@ try {
   await page.evaluate(() => window.scrollTo(0, 0));
   if (process.env.OPENFORENSIC_SCREENSHOTS === "1")
     await page.screenshot({ path: "artifacts/custody.png", fullPage: false });
+  assert.deepEqual(errors, []);
+  const existingCase = await page.evaluate(() => window.forensic.currentCase());
+  await page
+    .getByRole("button", { name: "Device sanitization", exact: true })
+    .click();
+  await page
+    .getByRole("heading", {
+      name: "Close the evidence case first",
+      exact: true,
+    })
+    .waitFor();
+  const refusal = await page.evaluate(async () => {
+    try {
+      await window.forensic.sanitizationPrepare({
+        serial: "SYNTHETIC",
+        limitGiB: 1,
+      });
+      return "unexpectedly allowed";
+    } catch (error) {
+      return String(error);
+    }
+  });
+  assert.ok(refusal.includes("Close the evidence case"));
+  await page
+    .getByRole("button", { name: "Close case for sanitization", exact: true })
+    .click();
+  await page.waitForFunction(
+    async () => (await window.forensic.currentCase()) === null,
+  );
+  assert.ok((await stat(join(existingCase.root, "case_store.db"))).size > 0);
+  assert.deepEqual(
+    await page.evaluate(() => window.forensic.sanitizationJobs()),
+    [],
+  );
+  if (process.env.OPENFORENSIC_SCREENSHOTS === "1")
+    await page.screenshot({
+      path: "artifacts/sanitization.png",
+      fullPage: false,
+    });
   assert.deepEqual(errors, []);
   console.log(
     "Desktop smoke passed: actual Electron IPC, case creation, verified tar import, parser, timeline/search, verified image/audio media protocols, custody verification, PDF export, no renderer errors. Screenshots contain synthetic test data only.",

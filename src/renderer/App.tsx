@@ -21,7 +21,9 @@ import {
   LockKeyhole,
   FileText,
   Activity,
+  Eraser,
 } from "lucide-react";
+import Sanitization from "./Sanitization";
 import type {
   CaseInfo,
   Stats,
@@ -34,6 +36,7 @@ import type {
   AiResult,
   Audit,
   ToolStatus,
+  SanitizationJob,
 } from "../shared/types";
 
 const api = window.forensic;
@@ -54,6 +57,7 @@ const tabs = [
   { id: "recovery", title: "Recovered candidates", icon: ScanLine },
   { id: "ai", title: "AI assistant", icon: Sparkles },
   { id: "custody", title: "Integrity & custody", icon: ShieldCheck },
+  { id: "sanitize", title: "Device sanitization", icon: Eraser },
 ] as const;
 type Tab = (typeof tabs)[number]["id"];
 function Button({
@@ -151,11 +155,23 @@ export default function App() {
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const [question, setQuestion] = useState("");
   const [model, setModel] = useState("");
+  const [sanitizationJob, setSanitizationJob] =
+    useState<SanitizationJob | null>(null);
   const acquiring = progress?.status === "running";
-  const disabled = busy || acquiring;
+  const sanitizing =
+    sanitizationJob?.status === "running" ||
+    sanitizationJob?.status === "cleaning";
+  const disabled = busy || acquiring || sanitizing;
   async function refresh() {
     const active = await api.currentCase();
     setCase(active);
+    if (!active) {
+      setStats(null);
+      setEvidence([]);
+      setThreads([]);
+      setAudit([]);
+      setSealed(false);
+    }
     if (active) {
       const [s, e, t, a] = await Promise.all([
         api.stats(),
@@ -223,13 +239,30 @@ export default function App() {
       if (p.status !== "running")
         void refresh().catch((e) => setError(String(e)));
     });
-    return stop;
+    const stopSanitization = api.onSanitization(setSanitizationJob);
+    void api
+      .sanitizationJobs()
+      .then((jobs) =>
+        setSanitizationJob(
+          (current) =>
+            current ||
+            jobs.find(
+              (j) => j.status === "running" || j.status === "cleaning",
+            ) ||
+            null,
+        ),
+      )
+      .catch((e) => setError(String(e)));
+    return () => {
+      stop();
+      stopSanitization();
+    };
   }, []);
   useEffect(() => {
     let mounted = true;
     let timer: ReturnType<typeof setTimeout>;
     async function detect() {
-      if (busy || acquiring) return;
+      if (busy || acquiring || sanitizing) return;
       try {
         const list = await api.devices();
         if (mounted) showDevices(list);
@@ -250,7 +283,7 @@ export default function App() {
       mounted = false;
       clearTimeout(timer);
     };
-  }, [busy, acquiring]);
+  }, [busy, acquiring, sanitizing]);
   useEffect(() => {
     setProfile(null);
     setBlocks([]);
@@ -367,7 +400,7 @@ export default function App() {
             <span /> LOCAL EVIDENCE STORAGE
           </div>
           <p>
-            Open source · v0.1.1
+            Open source · v0.1.2
             <br />
             UTC timestamps throughout
           </p>
@@ -408,7 +441,9 @@ export default function App() {
               <span className="eyebrow">
                 {tab === "acquire"
                   ? "PRESERVE · ACQUIRE · VERIFY"
-                  : "EXAMINE · CORROBORATE · DOCUMENT"}
+                  : tab === "sanitize"
+                    ? "ASSESS · CLEAN · DOCUMENT"
+                    : "EXAMINE · CORROBORATE · DOCUMENT"}
               </span>
               <h1>{tabs.find((t) => t.id === tab)!.title}</h1>
               <p>
@@ -420,7 +455,9 @@ export default function App() {
                       ? "Inspect recovered bytes with explicit provenance and uncertainty."
                       : tab === "ai"
                         ? "Ask questions and draft findings using your locally installed model."
-                        : "Review byte integrity, acquisition history, and the case seal."}
+                        : tab === "sanitize"
+                          ? "Exercise shared-storage free space while retaining existing user files, with explicit limits."
+                          : "Review byte integrity, acquisition history, and the case seal."}
               </p>
             </div>
             {busy && (
@@ -453,7 +490,18 @@ export default function App() {
               tools to choose ADB or recover the connection.
             </div>
           )}
-          {!caseInfo ? (
+          {tab === "sanitize" ? (
+            <Sanitization
+              caseInfo={caseInfo}
+              devices={devices}
+              disabled={disabled}
+              closeCase={() =>
+                void run(async () => {
+                  await api.closeCase();
+                })
+              }
+            />
+          ) : !caseInfo ? (
             <div className="welcome">
               <Fingerprint size={42} />
               <h2>Begin with a case</h2>
@@ -1394,8 +1442,10 @@ export default function App() {
             </>
           )}
           <footer className="workspace-footer">
-            <ShieldCheck size={13} /> Evidence is preserved locally.
-            Interpretation and attribution require examiner review.
+            <ShieldCheck size={13} />{" "}
+            {tab === "sanitize"
+              ? "Cleanup receipts stay on this workstation. Permanent deleted-data destruction is not verified."
+              : "Evidence is preserved locally. Interpretation and attribution require examiner review."}
           </footer>
         </div>
       </main>

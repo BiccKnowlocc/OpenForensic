@@ -113,6 +113,23 @@ export interface ToolStatus {
   aiStatus: string;
 }
 export interface DesktopAPI {
+  closeCase(): Promise<void>;
+  sanitizationPrepare(input: {
+    serial: string;
+    limitGiB: number;
+  }): Promise<SanitizationPlan>;
+  sanitizationStart(input: {
+    token: string;
+    operator: string;
+    authority: string;
+    typedSerial: string;
+    acknowledged: boolean;
+  }): Promise<string | null>;
+  sanitizationJobs(): Promise<SanitizationJob[]>;
+  sanitizationCancel(): Promise<void>;
+  sanitizationCleanup(id: string): Promise<SanitizationJob>;
+  sanitizationExport(id: string): Promise<string | null>;
+  onSanitization(callback: (job: SanitizationJob) => void): () => void;
   tools(): Promise<ToolStatus>;
   selectTool(name: "adb" | "python"): Promise<boolean>;
   restartBridge(): Promise<Device[]>;
@@ -157,6 +174,55 @@ export interface DesktopAPI {
   exportReport(aiId: string): Promise<string | null>;
   media(messageId: number): Promise<string | null>;
   onProgress(callback: (progress: Progress) => void): () => void;
+}
+export interface SanitizationDevice {
+  serial: string;
+  manufacturer: string;
+  model: string;
+  fingerprint: string;
+  hardware: string;
+  androidVersion: string;
+  encryptionState: string;
+  encryptionType: string;
+  storageRoot: string;
+  filesystem: string;
+  totalBytes: number;
+  freeBytes: number;
+  battery: { level: number; powered: boolean; temperatureC: number };
+}
+export interface SanitizationPlan {
+  token: string;
+  expiresUtc: string;
+  device: SanitizationDevice;
+  reserveBytes: number;
+  targetBytes: number;
+  limitGiB: number;
+  assurance: "best_effort_only";
+}
+export type SanitizationStatus =
+  | "running"
+  | "cleaning"
+  | "complete"
+  | "cancelled"
+  | "failed"
+  | "cleanup_required";
+export interface SanitizationJob {
+  id: string;
+  plan: SanitizationPlan;
+  operator: string;
+  authority: string;
+  startedUtc: string;
+  updatedUtc: string;
+  status: SanitizationStatus;
+  phase: string;
+  bytesSent: number;
+  bytesVerified: number;
+  bytesPerSecond: number;
+  lastIndex: number;
+  directoryCreated: boolean;
+  cleanupComplete: boolean;
+  error: string | null;
+  receiptPath: string | null;
 }
 declare global {
   interface Window {

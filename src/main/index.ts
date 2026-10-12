@@ -28,6 +28,8 @@ import { ForensicCase, realWithin } from "./case";
 import { ParserBridge } from "../engine/parser_bridge";
 import { EvidenceAI, models, localAiStatus } from "./ai";
 import { ToolSettings } from "./settings";
+import { SanitizationService } from "./sanitization/service";
+import { AndroidSanitizationTransport } from "./sanitization/transport";
 import { reportHtml } from "./report";
 import { hashFile } from "./integrity/hashStream";
 import type { CaseInfo, ToolStatus } from "../shared/types";
@@ -81,6 +83,7 @@ if (!app.requestSingleInstanceLock()) app.quit();
 let window: BrowserWindow;
 let current: ForensicCase | null = null;
 let busy = false;
+let sanitization: SanitizationService | null = null;
 const bridge = new DeviceBridge();
 const ai = new EvidenceAI();
 const mediaTokens = new Map<string, string>();
@@ -93,7 +96,7 @@ const caseItem = (): ForensicCase => {
   return current;
 };
 const idle = (): void => {
-  if (busy || acquisition.active)
+  if (busy || acquisition.active || sanitization?.active)
     throw new Error("Finish or cancel the current operation first.");
 };
 async function exclusive<T>(work: () => Promise<T>): Promise<T> {
@@ -155,6 +158,27 @@ app
       join(app.getPath("userData"), "tool-settings.json"),
     );
     await bridge.configure(settings.adb);
+    sanitization = new SanitizationService(
+      join(app.getPath("userData"), "sanitization"),
+      new AndroidSanitizationTransport(bridge),
+      (job) => {
+        if (
+          window &&
+          !window.isDestroyed() &&
+          !window.webContents.isDestroyed()
+        )
+          window.webContents.send("forensic:sanitization", job);
+      },
+    );
+    const sanitize = sanitization;
+    if (sanitize.recoveryWarning)
+      logDiagnostic("sanitization_recovery", sanitize.recoveryWarning);
+    function noCase(): void {
+      if (current)
+        throw new Error(
+          "Close the evidence case before sanitization. Existing evidence will remain in its case folder.",
+        );
+    }
     const parser = new ParserBridge(
       app.isPackaged
         ? join(process.resourcesPath, "engine")
@@ -294,6 +318,86 @@ app
       }),
     );
     handle("current-case", nothing, () => current?.info ?? null);
+    handle("close-case", nothing, () =>
+      exclusive(async () => {
+        current?.store.close();
+        current = null;
+        mediaTokens.clear();
+      }),
+    );
+    handle(
+      "sanitization-prepare",
+      z.object({ serial, limitGiB: z.number().min(0).max(512) }),
+      (input) =>
+        exclusive(async () => {
+          noCase();
+          return sanitize.prepare(input.serial, input.limitGiB);
+        }),
+    );
+    handle(
+      "sanitization-start",
+      z.object({
+        token: z.string().uuid(),
+        operator: z.string().trim().min(1).max(200),
+        authority: z.string().trim().min(1).max(4000),
+        typedSerial: serial,
+        acknowledged: z.boolean(),
+      }),
+      (input) =>
+        exclusive(async () => {
+          noCase();
+          const plan = sanitize.plan(input.token);
+          if (!input.acknowledged || input.typedSerial !== plan.device.serial)
+            throw new Error("Confirm the device and the cleanup limits first.");
+          const confirmation = await dialog.showMessageBox(window, {
+            type: "warning",
+            title: "Confirm free-space cleanup",
+            buttons: ["Cancel", "Start cleanup"],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+            message: `Write temporary files on ${plan.device.manufacturer} ${plan.device.model}?`,
+            detail: `Serial: ${plan.device.serial}\nTemporary writes: ${(plan.targetBytes / 1024 ** 3).toFixed(2)} GiB\nSafety reserve: ${(plan.reserveBytes / 1024 ** 3).toFixed(2)} GiB\n\nExisting files will not be selected for deletion and the phone will not be reset. Android can clear its own caches under storage pressure. Temporary files are removed afterward; a USB interruption may require cleanup after reconnecting.\n\nThis cannot guarantee permanent destruction of deleted data. Have a current backup before proceeding.`,
+          });
+          if (confirmation.response !== 1) return null;
+          return sanitize.start(input);
+        }),
+    );
+    handle("sanitization-jobs", nothing, () => sanitize.jobs());
+    handle("sanitization-cancel", nothing, () => sanitize.cancel());
+    handle("sanitization-cleanup", z.string().uuid(), (id) =>
+      exclusive(async () => {
+        noCase();
+        return sanitize.cleanup(id);
+      }),
+    );
+    handle("sanitization-export", z.string().uuid(), (id) =>
+      exclusive(async () => {
+        const receipt = sanitize.exportReceipt(id);
+        const selected = await dialog.showSaveDialog(window, {
+          title: "Export cleanup receipt",
+          defaultPath: `openforensic-cleanup-${id}.json`,
+          filters: [{ name: "JSON receipt", extensions: ["json"] }],
+        });
+        if (selected.canceled || !selected.filePath) return null;
+        if (
+          existsSync(selected.filePath) ||
+          existsSync(selected.filePath + ".sha256")
+        )
+          throw new Error(
+            "Choose a new receipt filename. Existing files will not be overwritten.",
+          );
+        writeFileSync(selected.filePath, receipt.json, {
+          flag: "wx",
+          mode: 0o600,
+        });
+        writeFileSync(selected.filePath + ".sha256", receipt.hash + "\n", {
+          flag: "wx",
+          mode: 0o600,
+        });
+        return selected.filePath;
+      }),
+    );
     handle("stats", nothing, () => caseItem().store.stats());
     handle("evidence", nothing, () => caseItem().store.evidence());
     handle(
@@ -455,6 +559,7 @@ app
         logDiagnostic("renderer_gone", JSON.stringify(details));
         if (details.reason !== "clean-exit") {
           acquisition.cancel();
+          sanitization?.cancel();
           dialog.showErrorBox(
             "OpenForensic display stopped",
             "Restart OpenForensic and reopen your case. Any interrupted capture must be checked as partial evidence. Diagnostic records are saved in the app settings folder.",
@@ -462,7 +567,7 @@ app
         }
       });
       window.on("close", (event) => {
-        if (busy || acquisition.active) {
+        if (busy || acquisition.active || sanitization?.active) {
           event.preventDefault();
           dialog.showMessageBoxSync(window, {
             type: "info",

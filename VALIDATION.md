@@ -1,5 +1,15 @@
 # Validation record and release gates
 
+## Preserve-data sanitization preview 0.1.2 — 2026-10-12
+
+The user requires existing data to remain, so this feature supplies no factory reset, raw erase, or promise of complete permanent deleted-data destruction. It is a separately selected, case-blocked free-space exercise on primary emulated storage. An explicit operator/authority, fresh assessment, typed serial, coverage/backup acknowledgement, and native confirmation are required.
+
+Fourteen new synthetic tests cover temporary-path injection and acquisition-policy rejection, storage units/reserve, power/temperature limits, device identity, confirmation and token replay, existing-file retention, readback failure, cancellation, reconnect cleanup, corrupted checkpoints, ownership refusal, bounded random streaming over non-PTY shell, remote exit rejection, and pre-aborted writes. All 26 TypeScript tests passed. TypeScript checking and production builds passed. The full Electron desktop workflow passed, including the new sidebar page, no-case access, backend refusal while an evidence case is open, closing the case without deleting its database, and the previous import/parser/search/media/verification/PDF flow. Native case/parser/SQLite integration passed locally; synthetic AI endpoints were skipped because real Ollama occupied the port.
+
+Windows packaging passed into a separate `release-v0.1.2` folder because the previous app was running. The same complete desktop workflow passed against that packaged executable, including sanitization sidebar and backend case protection. The unpacked folder must stay together.
+
+These tests use simulated phones and synthetic files. The temporary-write/sanitization path has not been executed on the user's phone. Independent Android hardware validation is required to establish command compatibility, original-file retention, interrupted cleanup, quotas, cache behavior, and thermal/power handling for each supported device/firmware. Temporary-file readback establishes those new bytes only; neither receipts nor completed progress prove earlier deleted contents unrecoverable.
+
 Tests generate synthetic material. They do not acquire an examiner's phone or establish legal admissibility. Rerun the commands in README on each release commit.
 
 ## Local validation snapshot — 2026-10-11

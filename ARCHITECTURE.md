@@ -29,9 +29,11 @@ flowchart TD
 
 ## Device boundary
 
-Only fixed reads and tightly validated block commands can pass the command policy. There is no arbitrary shell channel, device push, install, delete, settings change, `adb root`, exploit, or encryption bypass. A randomized completion trailer carries remote exit status through `exec-out`; its bytes never enter the evidence payload. Existing root is detected as either a root shell or `su`.
+Only fixed reads and tightly validated block reads can pass the acquisition command policy. Acquisition has no arbitrary shell channel, push, install, delete, settings change, `adb root`, exploit, or encryption bypass. A randomized completion trailer carries remote exit status through `exec-out`; its bytes never enter the evidence payload. Existing root is detected as either a root shell or `su`.
 
-The policy prevents application-issued target writes. It does not stop live Android services or acquisition-triggered logs. Logical app archives can contain inconsistent database/WAL snapshots because a running application can write during capture. These facts are recorded and surfaced.
+The acquisition policy prevents application-issued target writes during acquisition. It does not stop live Android services or acquisition-triggered logs. Logical app archives can contain inconsistent database/WAL snapshots because a running application can write during capture. These facts are recorded and surfaced.
+
+The explicitly selected sanitization workflow uses a separate typed IPC and transport. An evidence case must be closed, all other operations must be idle, an assessment token must be fresh, device identity/storage must match, and a serial/authority/backup acknowledgement plus native confirmation is required. Only exclusive temporary files under a generated ownership-marked shared-storage directory are written or removed. Random input uses bidirectional non-PTY ADB shell and bounded host memory; size/SHA-256 readback is mandatory. Storage/power/temperature gates and a reserve limit pressure. Durable checkpoints permit exact-file reconnect cleanup; receipts declare permanent deletion unverified. No factory reset or raw erase is supplied in the preserve-data mode.
 
 ## Evidence and case boundary
 
@@ -51,4 +53,4 @@ Live adapters make explicit assumptions about supported schemas and timestamp un
 
 The main process retrieves a bounded set of source rows, checks Ollama's local-only status and model metadata, and calls a loopback endpoint with redirects disabled. No model tools are supplied. Evidence text is treated as untrusted prompt data. The application rejects missing or out-of-scope citations, retains the full prompt/response and source snapshot digest, and labels drafts for examiner review. Valid IDs do not guarantee valid statements.
 
-Reports escape all evidence and AI text. Exported HTML has a restrictive CSP; PDF rendering uses a hidden sandboxed Electron window. Media uses per-case capability URLs, restricted extensions, verified derivative hashes, and resolved path containment. Device sanitization is backlog work in a separate destructive workflow and cannot enter this acquisition allowlist.
+Reports escape all evidence and AI text. Exported HTML has a restrictive CSP; PDF rendering uses a hidden sandboxed Electron window. Media uses per-case capability URLs, restricted extensions, verified derivative hashes, and resolved path containment. Sanitization commands cannot enter the acquisition allowlist, and AI has no sanitization methods or tools.

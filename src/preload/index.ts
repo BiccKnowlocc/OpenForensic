@@ -3,6 +3,21 @@ import type { DesktopAPI, Progress } from "../shared/types";
 const invoke = (channel: string, ...args: unknown[]) =>
   ipcRenderer.invoke(`forensic:${channel}`, ...args);
 const api: DesktopAPI = {
+  closeCase: () => invoke("close-case"),
+  sanitizationPrepare: (input) => invoke("sanitization-prepare", input),
+  sanitizationStart: (input) => invoke("sanitization-start", input),
+  sanitizationJobs: () => invoke("sanitization-jobs"),
+  sanitizationCancel: () => invoke("sanitization-cancel"),
+  sanitizationCleanup: (id) => invoke("sanitization-cleanup", id),
+  sanitizationExport: (id) => invoke("sanitization-export", id),
+  onSanitization: (callback) => {
+    const listener = (
+      _event: unknown,
+      job: import("../shared/types").SanitizationJob,
+    ) => callback(job);
+    ipcRenderer.on("forensic:sanitization", listener);
+    return () => ipcRenderer.removeListener("forensic:sanitization", listener);
+  },
   tools: () => invoke("tools"),
   selectTool: (name) => invoke("select-tool", name),
   restartBridge: () => invoke("restart-bridge"),
