@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-electron/
+out/
+.netlify/
+web/.netlify/
+web/dist/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+cases/
+*.tsbuildinfo
