@@ -91,7 +91,9 @@ src/renderer
 - `integrity/hashStream.ts` hashes each byte stream with MD5 and SHA-256 in a Transform as the file is written. Hashes are stored in `evidence_manifest.json`, not computed from a second read after the fact.
 - `evidence_manifest.json` records device ids, timestamps, operator, source paths, and hashes.
 - The audit log is immutable JSON: each event is appended. The UI does not rewrite earlier lines.
-- Case folders support create, open, and archive. Archive does not delete the manifest or the log.
+- Case folders support create, open, and archive. Archive does not delete the manifest or the log. The case screen already archives the open folder.
+- The timeline filters by US Eastern date, sender, and platform (SMS, call, or media).
+- The custody tab can print, and it can save a standalone HTML file the examiner can open outside the app. Times in that file are US Eastern.
 
 ## Modules
 
