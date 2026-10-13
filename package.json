@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "./out/main/index.js",
   "description": "Authorized Android logical acquisition workstation and web case viewer.",
   "engines": {
     "node": ">=22"
