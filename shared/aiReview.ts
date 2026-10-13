@@ -112,23 +112,40 @@ function draftReport(bundle: CaseBundle): string {
   ].join("\n");
 }
 
-export function timelineRows(bundle: CaseBundle): { at: string; line: string }[] {
-  const rows: { at: string; line: string }[] = [];
+export type TimelinePlatform = "sms" | "call" | "media";
+
+export type TimelineEvent = {
+  at: string;
+  line: string;
+  sender: string;
+  platform: TimelinePlatform;
+};
+
+export function timelineRows(bundle: CaseBundle): TimelineEvent[] {
+  const rows: TimelineEvent[] = [];
   for (const message of bundle.messages) {
+    const sender = partyName(bundle, message.senderId);
     rows.push({
       at: message.timestampUtc,
-      line: `${formatEastern(message.timestampUtc)} SMS ${partyName(bundle, message.senderId)} → ${partyName(bundle, message.receiverId)}: ${message.messageText}`,
+      sender,
+      platform: "sms",
+      line: `${formatEastern(message.timestampUtc)} SMS ${sender} → ${partyName(bundle, message.receiverId)}: ${message.messageText}`,
     });
   }
   for (const call of bundle.calls) {
+    const sender = call.name || call.number;
     rows.push({
       at: call.timestampUtc,
-      line: `${formatEastern(call.timestampUtc)} ${call.direction} call ${call.name} (${call.durationSec}s)`,
+      sender,
+      platform: "call",
+      line: `${formatEastern(call.timestampUtc)} ${call.direction} call ${sender} (${call.durationSec}s)`,
     });
   }
   for (const item of bundle.media) {
     rows.push({
       at: item.acquiredAt,
+      sender: "Shared storage",
+      platform: "media",
       line: `${formatEastern(item.acquiredAt)} media ${item.sourcePath}`,
     });
   }
