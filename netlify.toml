@@ -1,0 +1,19 @@
+# Site settings for the web case viewer.
+# Base is the repository root so npm install uses this package.json.
+[build]
+  command = "npm run build:web"
+  publish = "web/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Browser routes such as /case/harbor-street-sample.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+
+[functions]
+  directory = "web/netlify/functions"
+  node_bundler = "esbuild"

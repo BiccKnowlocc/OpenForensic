@@ -1,5 +1,13 @@
 # Validation record and release gates
 
+## Combined workstation and web release 0.1.4 — 2026-10-13
+
+The newer main branch contained a separately implemented case-bundle desktop and Netlify web viewer. The merge preserves the forensic workstation's main/preload/renderer/database entry points and moves the incoming viewer App, desktop entry, and database helper to explicit separate files. Both original data contracts and their tests remain available. Neither existing cases nor evidence are migrated or uploaded by this merge. Versioned packaging remains guarded.
+
+The dependency graph uses an OpenAI SDK supporting the workstation's Zod 4 version and the updated Netlify function types. The custom local function adapter and Netlify CLI bundler provide the web development/deployment path without an additional Vite plugin. The audit is back to the two documented entries for the unresolved inherited node-forge/adbkit advisory.
+
+Local production typechecking/builds, all 35 workstation tests, all 27 incoming viewer tests under Electron's native SQLite ABI, 13 Python tests, native case/parser integration, and the workstation desktop workflow passed. Both the web and retained case-bundle desktop were built. Viewer UI validation exercises an isolated labeled sample, timeline filters, multi-artifact search, local review, custody export control, and renderer errors. Existing Netlify team-only access remains enabled. Independent phone acquisition/sanitization qualification and release signing remain outstanding.
+
 ## Interrupted shared-storage capture repair 0.1.3 — 2026-10-12
 
 A read-only inspection of the reported case found a 39,208,888,320-byte (36.52 GiB) tar capture with 12,158 readable member headers. The last declared file payload extends beyond the captured bytes, the tar terminator is absent, and the remote marker is absent. The archive is genuinely truncated; it remains partial, and no original case, evidence file, or custody entry was changed. The earlier exec-out mode cannot distinguish every early connection end through its host exit code and suppressed remote stderr. The specific historical cable/server/Android cause cannot be established from that capture alone.

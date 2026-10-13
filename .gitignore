@@ -12,3 +12,13 @@ cases/
 .env
 artifacts/
 build-checks/
+
+dist-electron/
+.netlify/
+web/.netlify/
+web/dist/
+.env.*
+!.env.example
+.DS_Store
+*.tsbuildinfo
+out-viewer/

@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@source "./**/*.{ts,tsx}";
+@source "../../web/**/*.{ts,tsx}";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", ui-serif, Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-ink: #101614;
+  --color-panel: #18211e;
+  --color-panel-2: #222c28;
+  --color-line: #31403a;
+  --color-paper: #e8f0ea;
+  --color-muted: #93a69b;
+  --color-brass: #e0b15c;
+  --color-brass-ink: #241c0e;
+  --color-moss: #8fbf9a;
+  --color-danger: #e07a64;
+  --color-sea: #8ec4d4;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+}
+
+* { box-sizing: border-box; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #3d4f47; border-radius: 99px; }
+
+@media print {
+  body.printing-custody { background: white; }
+  body.printing-custody * { visibility: hidden; }
+  body.printing-custody #custody-report,
+  body.printing-custody #custody-report * { visibility: visible; }
+  body.printing-custody #custody-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: 0;
+    background: white;
+    color: black;
+  }
+  body.printing-custody #custody-report .text-muted { color: #333; }
+}

@@ -8,3 +8,6 @@ The current build follows the supplied Electron/Android/local-SQLite scope and r
 4. If a documentation site is requested later, which host should serve it? Evidence and USB acquisition currently remain local.
 5. Which release signing and externally preserved seal/checkpoint process should be used?
 6. Which local Ollama model and hardware should be used for AI validation?
+
+
+The merged web/case-bundle viewer and its original decisions are retained separately under `web/`, `shared/`, and `docs/viewer-*.md`. The default native workstation retains its verified acquisition, local-only AI, parser, and guarded sanitization services.

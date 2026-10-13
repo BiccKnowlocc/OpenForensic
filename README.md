@@ -2,7 +2,7 @@
 
 An open-source, local Android evidence acquisition and communications examination desktop application. Electron owns device access and case storage; a sandboxed React interface provides acquisition monitoring, searchable conversations, candidate recovery inspection, local AI assistance, and report export.
 
-**Release status: executable developer preview, 0.1.3.** The build includes acquisition, integrity, parsing, UI, AI, and a separate best-effort shared-storage cleanup workflow. It is not a validated replacement for a commercial forensic suite. Real-device validation, independent examiner review, signed installers, and the unresolved upstream dependency advisory described in [SECURITY.md](SECURITY.md) are release gates before operational casework.
+**Release status: executable developer preview, 0.1.4.** The build includes acquisition, integrity, parsing, UI, AI, and a separate best-effort shared-storage cleanup workflow. It is not a validated replacement for a commercial forensic suite. Real-device validation, independent examiner review, signed installers, and the unresolved upstream dependency advisory described in [SECURITY.md](SECURITY.md) are release gates before operational casework.
 
 ## Run
 
@@ -31,7 +31,7 @@ npm run dist
 
 `package` produces an unpacked desktop application; `dist` produces the platform installer. macOS signing/notarization and Windows signing require operator-provided release credentials. Run platform packaging on the corresponding platform.
 
-The packaging wrapper writes to `release-v<version>` by default; for this version the Windows executable is `release-v0.1.3/win-unpacked/OpenForensic.exe`. Keep the entire `win-unpacked` folder together, including `resources/engine`. Windows packaging refuses to replace a target folder with a running OpenForensic process. Existing output folders are refused on other platforms; choose another release folder. Use `node scripts/package.mjs --check` for a read-only preflight, or `npm run package -- --output-name=release-v0.1.3-build2` for a separate output. Do not invoke electron-builder directly against a running app. The build uses the Electron distribution already installed in `node_modules/electron/dist`, which avoids a second download and archive staging rename. Host Python and Android platform tools are still required for their corresponding functions.
+The packaging wrapper writes to `release-v<version>` by default; for this version the Windows executable is `release-v0.1.4/win-unpacked/OpenForensic.exe`. Keep the entire `win-unpacked` folder together, including `resources/engine`. Windows packaging refuses to replace a target folder with a running OpenForensic process. Existing output folders are refused on other platforms; choose another release folder. Use `node scripts/package.mjs --check` for a read-only preflight, or `npm run package -- --output-name=release-v0.1.4-build2` for a separate output. Do not invoke electron-builder directly against a running app. The build uses the Electron distribution already installed in `node_modules/electron/dist`, which avoids a second download and archive staging rename. Host Python and Android platform tools are still required for their corresponding functions.
 
 ## Connection troubleshooting
 
@@ -58,6 +58,27 @@ Close the evidence case first. Select the device and a temporary-write limit, as
 The separate transport creates an exclusive job directory on primary emulated shared storage and streams random bytes into 64 MiB files with exclusive creation and fsync. Each file is verified by size and SHA-256 readback before counting it as verified. Existing files are not selected for deletion. The directory carries a job ownership marker; cleanup validates canonical paths, rejects symlinks, removes only recorded temporary file names, and removes the directory only when empty apart from that marker. There is no recursive delete, raw-device write, root request, reset, or arbitrary write command API.
 
 Stop requests remove the temporary files. USB loss retains a durable checkpoint and a reconnect cleanup action for the same identified device. Operation receipts and hash-chained logs live outside case folders and can be exported as JSON with a SHA-256 companion. They verify recorded activity and temporary-file readback, not destruction of previous deleted contents. Private app databases/WALs, reserved/remapped flash, SD cards, cloud backups, and copies on other devices are excluded. Android may independently clear caches or modify its data under storage pressure; keep a current backup.
+
+## Web viewer and existing case bundles
+
+The merged web viewer remains under `web/`, with its routed case screens under `src/renderer/screens` and the shared JSON bundle contract under `shared/`. It supports the labeled Harbor Street sample, Eastern-time timeline filters, SMS/call/contact search, thread inspection, review, and custody HTML export. The forensic desktop's SQLite evidence schema and the older case-bundle schema are separate: the bundle database helpers live in `src/db/viewer.ts`. Original decisions and architecture are retained in `docs/viewer-*.md`.
+
+```powershell
+npm run dev:web
+npm run build:web
+```
+
+Netlify builds `web/dist` and bundles the functions from `web/netlify/functions` using `netlify.toml`. This is an existing protected team site; deployment preserves its access controls and server environment. The web review may use its configured Netlify AI Gateway and falls back to labeled local review. The forensic workstation continues to use local-only Ollama. Desktop evidence is not automatically uploaded by either build.
+
+To use the retained older desktop with JSON case bundles and its existing case-folder/Atlas contract:
+
+```powershell
+npm run dev:viewer-desktop
+```
+
+That entry builds into `out-viewer`, separately from the default workstation's `out` folder. The portable Windows release uses the default forensic workstation. Keep the corresponding case format with its entry point; the merge does not rewrite or migrate existing cases.
+
+Validate the viewer with `npm run test:viewer`, `npm run build:viewer-desktop`, and `npm run test:viewer-ui` after building the web and viewer desktop. UI tests generate isolated sample cases, remove cloud credentials from the test environment, and disable ADB discovery in the bundle desktop.
 
 ## AI assistance
 

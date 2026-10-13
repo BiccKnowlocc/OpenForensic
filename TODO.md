@@ -56,3 +56,6 @@ Implementation checklist for a local examiner workstation. Checked items have co
 - [ ] Independent Android hardware validation, including existing-file preservation and interrupted-device cleanup on each supported build.
 - [ ] Manufacturer reset/cryptographic erase qualification for a future explicitly selected full-device disposal mode. The current user requirement preserves existing data, so this release provides no factory reset.
 - [ ] Guaranteed deletion of all former contents while preserving all current data is not achievable through ordinary Android free-space writes; do not claim this capability.
+
+
+The merged web/case-bundle viewer and its original decisions are retained separately under `web/`, `shared/`, and `docs/viewer-*.md`. The default native workstation retains its verified acquisition, local-only AI, parser, and guarded sanitization services.

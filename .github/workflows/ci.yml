@@ -22,7 +22,12 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - run: npm run test:viewer
+      - run: npm run build:web
+      - run: npm run build:viewer-desktop
       - run: npm run test:python
       - run: npm run test:integration
       - if: runner.os == 'Windows'
         run: npm run test:desktop
+      - if: runner.os == 'Windows'
+        run: npm run test:viewer-ui

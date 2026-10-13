@@ -1,0 +1,394 @@
+{
+  "summary": {
+    "id": "harbor-street-sample",
+    "name": "Harbor Street sample",
+    "operator": "Sample Operator",
+    "createdAt": "2026-10-11T21:00:00.000Z",
+    "sample": true,
+    "status": "open",
+    "deviceLabel": "Sample Pixel · not a phone",
+    "ownerName": "Casey Morgan",
+    "ownerNumber": "+14155550100"
+  },
+  "messages": [
+    {
+      "id": "sms-01",
+      "threadId": "thread-alex",
+      "timestampUtc": "2026-10-08T18:12:00.000Z",
+      "platform": "sms",
+      "senderId": "+14155550142",
+      "receiverId": "+14155550100",
+      "messageText": "Can you meet at the Harbor Street lot Saturday? Gray sedan will be in the back row.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-02",
+      "threadId": "thread-alex",
+      "timestampUtc": "2026-10-08T18:14:22.000Z",
+      "platform": "sms",
+      "senderId": "+14155550100",
+      "receiverId": "+14155550142",
+      "messageText": "Saturday 6pm works. I will not text the office about this.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-03",
+      "threadId": "thread-alex",
+      "timestampUtc": "2026-10-08T18:16:01.000Z",
+      "platform": "sms",
+      "senderId": "+14155550142",
+      "receiverId": "+14155550100",
+      "messageText": "Bring the locker key. Jordan left a drive in locker 14.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-04",
+      "threadId": "thread-alex",
+      "timestampUtc": "2026-10-08T19:02:11.000Z",
+      "platform": "sms",
+      "senderId": "+14155550100",
+      "receiverId": "+14155550142",
+      "messageText": "Meet at the office instead.",
+      "mediaPath": null,
+      "isDeletedFlag": true
+    },
+    {
+      "id": "sms-05",
+      "threadId": "thread-alex",
+      "timestampUtc": "2026-10-09T02:11:40.000Z",
+      "platform": "sms",
+      "senderId": "+14155550142",
+      "receiverId": "+14155550100",
+      "messageText": "Photo of the sedan is on the phone. Plate starts with 7HBR.",
+      "mediaPath": "/sdcard/DCIM/Camera/IMG_2041.svg",
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-06",
+      "threadId": "thread-alex",
+      "timestampUtc": "2026-10-10T15:02:11.000Z",
+      "platform": "sms",
+      "senderId": "+14155550100",
+      "receiverId": "+14155550142",
+      "messageText": "I have the photo. Plate 7HBR214. I am keeping it in DCIM.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-07",
+      "threadId": "thread-alex",
+      "timestampUtc": "2026-10-10T15:09:44.000Z",
+      "platform": "sms",
+      "senderId": "+14155550142",
+      "receiverId": "+14155550100",
+      "messageText": "Delete the thread after Saturday. Do not call from the office line.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-08",
+      "threadId": "thread-alex",
+      "timestampUtc": "2026-10-11T01:20:00.000Z",
+      "platform": "sms",
+      "senderId": "+14155550100",
+      "receiverId": "+14155550142",
+      "messageText": "Still on for 6pm. I will be in the back row.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-09",
+      "threadId": "thread-alex",
+      "timestampUtc": "2026-10-11T01:22:18.000Z",
+      "platform": "sms",
+      "senderId": "+14155550142",
+      "receiverId": "+14155550100",
+      "messageText": "Confirmed. If I miss the call, check Harbor Auto.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-10",
+      "threadId": "thread-jordan",
+      "timestampUtc": "2026-10-07T16:40:00.000Z",
+      "platform": "sms",
+      "senderId": "+14155550198",
+      "receiverId": "+14155550100",
+      "messageText": "USB drive is in locker 14 at the Harbor Street gym. Combination is the last four of my number.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-11",
+      "threadId": "thread-jordan",
+      "timestampUtc": "2026-10-07T16:44:12.000Z",
+      "platform": "sms",
+      "senderId": "+14155550100",
+      "receiverId": "+14155550198",
+      "messageText": "0198. I will pick it up Friday.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-12",
+      "threadId": "thread-jordan",
+      "timestampUtc": "2026-10-09T11:05:00.000Z",
+      "platform": "sms",
+      "senderId": "+14155550198",
+      "receiverId": "+14155550100",
+      "messageText": "Do not copy the drive onto the office laptop.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-13",
+      "threadId": "thread-jordan",
+      "timestampUtc": "2026-10-09T11:12:33.000Z",
+      "platform": "sms",
+      "senderId": "+14155550100",
+      "receiverId": "+14155550198",
+      "messageText": "Understood. I will use the phone only.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-14",
+      "threadId": "thread-jordan",
+      "timestampUtc": "2026-10-10T20:18:00.000Z",
+      "platform": "sms",
+      "senderId": "+14155550198",
+      "receiverId": "+14155550100",
+      "messageText": "Alex has the key now. Text Alex if the locker sticks.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-15",
+      "threadId": "thread-harbor-auto",
+      "timestampUtc": "2026-10-10T13:00:00.000Z",
+      "platform": "sms",
+      "senderId": "+14155550177",
+      "receiverId": "+14155550100",
+      "messageText": "Reminder: service appointment Saturday 4:30pm, 400 Harbor Street.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    },
+    {
+      "id": "sms-16",
+      "threadId": "thread-harbor-auto",
+      "timestampUtc": "2026-10-10T13:05:00.000Z",
+      "platform": "sms",
+      "senderId": "+14155550100",
+      "receiverId": "+14155550177",
+      "messageText": "I will be there before the 6pm meeting.",
+      "mediaPath": null,
+      "isDeletedFlag": false
+    }
+  ],
+  "calls": [
+    {
+      "id": "call-01",
+      "timestampUtc": "2026-10-09T19:02:00.000Z",
+      "number": "+14155550142",
+      "name": "Alex Rivera",
+      "direction": "missed",
+      "durationSec": 0
+    },
+    {
+      "id": "call-02",
+      "timestampUtc": "2026-10-10T21:15:00.000Z",
+      "number": "+14155550198",
+      "name": "Jordan Hale",
+      "direction": "outgoing",
+      "durationSec": 246
+    },
+    {
+      "id": "call-03",
+      "timestampUtc": "2026-10-11T16:30:00.000Z",
+      "number": "+14155550177",
+      "name": "Harbor Auto",
+      "direction": "incoming",
+      "durationSec": 88
+    }
+  ],
+  "contacts": [
+    {
+      "id": "contact-casey",
+      "name": "Casey Morgan",
+      "number": "+14155550100"
+    },
+    {
+      "id": "contact-alex",
+      "name": "Alex Rivera",
+      "number": "+14155550142"
+    },
+    {
+      "id": "contact-jordan",
+      "name": "Jordan Hale",
+      "number": "+14155550198"
+    },
+    {
+      "id": "contact-harbor",
+      "name": "Harbor Auto",
+      "number": "+14155550177"
+    }
+  ],
+  "media": [
+    {
+      "id": "media-sedan",
+      "sourcePath": "/sdcard/DCIM/Camera/IMG_2041.svg",
+      "localPath": "files/DCIM/Camera/IMG_2041.svg",
+      "kind": "image",
+      "note": "Sample placeholder, not a photograph. Gray sedan, plate 7HBR214, Harbor Street lot.",
+      "acquiredAt": "2026-10-11T21:04:12.000Z",
+      "md5": "9592cbfba9f09f3630aea7d91540b47c",
+      "sha256": "b98256a11f8612a21a97c2b6392240bd3fda8bc5c818b87fc0aceeb6647a587a",
+      "bytes": 209
+    },
+    {
+      "id": "media-locker",
+      "sourcePath": "/sdcard/Download/locker-note.txt",
+      "localPath": "files/Download/locker-note.txt",
+      "kind": "download",
+      "note": "Sample download. Locker 14 at the Harbor Street gym.",
+      "acquiredAt": "2026-10-11T21:04:12.000Z",
+      "md5": "3b042f7a99c98b638aac57c87a031b3b",
+      "sha256": "8743954a52a4e2103044b6a7d0f73a91a34fb95c73180b9e5c48e0962b963dad",
+      "bytes": 126
+    },
+    {
+      "id": "media-voice",
+      "sourcePath": "/sdcard/Recordings/voice-001.txt",
+      "localPath": "files/Recordings/voice-001.txt",
+      "kind": "recording",
+      "note": "Sample transcript placeholder. There is no audio recording in this case.",
+      "acquiredAt": "2026-10-11T21:04:12.000Z",
+      "md5": "caf5881ea8c66167e46b4dc4d7e1b1b1",
+      "sha256": "71788b652ad8cab11f4cf329dbdeeb8c97499174f52d8f57a9b506215c7b4cc2",
+      "bytes": 147
+    }
+  ],
+  "manifest": {
+    "caseId": "harbor-street-sample",
+    "operator": "Sample Operator",
+    "createdAt": "2026-10-11T21:00:00.000Z",
+    "device": {
+      "serial": "SAMPLE",
+      "model": "Sample Pixel",
+      "android": "14",
+      "selinux": "Enforcing",
+      "rooted": false,
+      "state": "device"
+    },
+    "items": [
+      {
+        "sourcePath": "content://sms",
+        "localPath": "raw/sms.txt",
+        "md5": "7f71a8bece20d935d31848fd716b15d9",
+        "sha256": "cacd8dee3163e0c4ab582ec675001714d868a75077d0128146a85fefd61da44b",
+        "bytes": 2725,
+        "acquiredAt": "2026-10-11T21:04:12.000Z",
+        "status": "hashed"
+      },
+      {
+        "sourcePath": "content://call_log/calls",
+        "localPath": "raw/calls.txt",
+        "md5": "e31bc77c1ed6cdd899a4de7d2a591f8f",
+        "sha256": "a6e9851f0f0aaffe384bc45e5a1af399332ed07fa223509f99e57340e4bf0b16",
+        "bytes": 279,
+        "acquiredAt": "2026-10-11T21:04:12.000Z",
+        "status": "hashed"
+      },
+      {
+        "sourcePath": "content://contacts/phones",
+        "localPath": "raw/contacts.txt",
+        "md5": "10cc59c34c49765fb2f820096fb8eef6",
+        "sha256": "d71b316a78dd84ee7c537d5250fa8c92b5ce99d24bb1b858e34a632d0c6683d9",
+        "bytes": 241,
+        "acquiredAt": "2026-10-11T21:04:12.000Z",
+        "status": "hashed"
+      },
+      {
+        "sourcePath": "/sdcard/DCIM/Camera/IMG_2041.svg",
+        "localPath": "files/DCIM/Camera/IMG_2041.svg",
+        "md5": "9592cbfba9f09f3630aea7d91540b47c",
+        "sha256": "b98256a11f8612a21a97c2b6392240bd3fda8bc5c818b87fc0aceeb6647a587a",
+        "bytes": 209,
+        "acquiredAt": "2026-10-11T21:04:12.000Z",
+        "status": "hashed"
+      },
+      {
+        "sourcePath": "/sdcard/Download/locker-note.txt",
+        "localPath": "files/Download/locker-note.txt",
+        "md5": "3b042f7a99c98b638aac57c87a031b3b",
+        "sha256": "8743954a52a4e2103044b6a7d0f73a91a34fb95c73180b9e5c48e0962b963dad",
+        "bytes": 126,
+        "acquiredAt": "2026-10-11T21:04:12.000Z",
+        "status": "hashed"
+      },
+      {
+        "sourcePath": "/sdcard/Recordings/voice-001.txt",
+        "localPath": "files/Recordings/voice-001.txt",
+        "md5": "caf5881ea8c66167e46b4dc4d7e1b1b1",
+        "sha256": "71788b652ad8cab11f4cf329dbdeeb8c97499174f52d8f57a9b506215c7b4cc2",
+        "bytes": 147,
+        "acquiredAt": "2026-10-11T21:04:12.000Z",
+        "status": "hashed"
+      }
+    ]
+  },
+  "audit": [
+    {
+      "id": "audit-01",
+      "at": "2026-10-11T21:00:00.000Z",
+      "action": "case_created",
+      "level": "info",
+      "detail": "Seeded the Harbor Street sample. This is not an acquisition."
+    },
+    {
+      "id": "audit-02",
+      "at": "2026-10-11T21:01:00.000Z",
+      "action": "extraction_started",
+      "level": "info",
+      "detail": "Sample logical sources written so the viewer works with no phone attached."
+    },
+    {
+      "id": "audit-03",
+      "at": "2026-10-11T21:04:12.000Z",
+      "action": "source_hashed",
+      "level": "info",
+      "detail": "content://sms hashed while the raw file was written."
+    },
+    {
+      "id": "audit-04",
+      "at": "2026-10-11T21:04:12.000Z",
+      "action": "source_hashed",
+      "level": "info",
+      "detail": "content://call_log/calls hashed while the raw file was written."
+    },
+    {
+      "id": "audit-05",
+      "at": "2026-10-11T21:04:12.000Z",
+      "action": "source_hashed",
+      "level": "info",
+      "detail": "content://contacts/phones hashed while the raw file was written."
+    },
+    {
+      "id": "audit-06",
+      "at": "2026-10-11T21:04:12.000Z",
+      "action": "source_hashed",
+      "level": "info",
+      "detail": "Shared media placeholders under DCIM, Download, and Recordings hashed while written."
+    },
+    {
+      "id": "audit-07",
+      "at": "2026-10-11T21:04:20.000Z",
+      "action": "extraction_completed",
+      "level": "info",
+      "detail": "Sample extraction finished. No device was attached."
+    }
+  ]
+}

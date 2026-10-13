@@ -54,3 +54,6 @@ Live adapters make explicit assumptions about supported schemas and timestamp un
 The main process retrieves a bounded set of source rows, checks Ollama's local-only status and model metadata, and calls a loopback endpoint with redirects disabled. No model tools are supplied. Evidence text is treated as untrusted prompt data. The application rejects missing or out-of-scope citations, retains the full prompt/response and source snapshot digest, and labels drafts for examiner review. Valid IDs do not guarantee valid statements.
 
 Reports escape all evidence and AI text. Exported HTML has a restrictive CSP; PDF rendering uses a hidden sandboxed Electron window. Media uses per-case capability URLs, restricted extensions, verified derivative hashes, and resolved path containment. Sanitization commands cannot enter the acquisition allowlist, and AI has no sanitization methods or tools.
+
+
+The merged web/case-bundle viewer and its original decisions are retained separately under `web/`, `shared/`, and `docs/viewer-*.md`. The default native workstation retains its verified acquisition, local-only AI, parser, and guarded sanitization services.
