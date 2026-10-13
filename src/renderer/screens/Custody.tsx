@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { custodyReportHtml } from "../../../shared/custodyHtml";
 import { formatEastern } from "../../../shared/names";
 import type { CaseBundle, VerifyReport } from "../../../shared/types";
 import { useApi } from "../api-context";
@@ -33,6 +34,17 @@ export function Custody({ bundle }: { bundle: CaseBundle }) {
     window.print();
   }
 
+  function saveHtml() {
+    const html = custodyReportHtml(bundle);
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${bundle.summary.id}-custody.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   const acquisition = bundle.manifest.acquisition === "partial" ? "Partial" : bundle.manifest.acquisition === "complete" ? "Complete" : "Not recorded";
   const posture = bundle.manifest.device?.posture;
 
@@ -42,7 +54,8 @@ export function Custody({ bundle }: { bundle: CaseBundle }) {
         <p className="text-sm text-muted">Hashes and times for this case folder. Times are US Eastern.</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => void check()} disabled={checking || api.mode !== "desktop"}>{checking ? "Checking…" : "Check saved files"}</Button>
-          <Button size="sm" onClick={printReport}>Print custody report</Button>
+          <Button variant="outline" size="sm" onClick={printReport}>Print</Button>
+          <Button size="sm" onClick={saveHtml}>Save HTML</Button>
         </div>
       </div>
       {api.mode !== "desktop" ? <p className="no-print text-xs text-muted">The viewer can print the report. Comparing files to the manifest runs in the desktop app, where the case folder lives.</p> : null}
