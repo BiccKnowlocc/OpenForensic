@@ -17,7 +17,7 @@ import { failureMessage } from "./classify";
 import { callsFromRows, contactsFromRows, messagesFromSmsRows, parseContentRows } from "./contentQuery";
 import { addManifestItem, readManifest, writeManifest } from "./manifest";
 import { replaceCaseRecords, readCaseFile, type CaseRecords } from "./caseFile";
-import { replaceMessages } from "../db/index";
+import { replaceMessages } from "../db/viewer";
 
 const SOURCES = [
   { id: "sms", label: "SMS", uri: "content://sms" },
@@ -243,5 +243,5 @@ function failureText(error: unknown, source: string): string {
 }
 
 export function deviceSummary(device: DeviceFingerprint): string {
-  return `${device.model} · Android ${device.android} · ${device.serial}`;
+  return `${device.model} Â· Android ${device.android} Â· ${device.serial}`;
 }

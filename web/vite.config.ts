@@ -1,20 +1,12 @@
-import netlify from "@netlify/vite-plugin";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
 import { localFunctionsPlugin } from "./devApi";
 
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
-  plugins: [
-    react(),
-    tailwindcss(),
-    localFunctionsPlugin(),
-    // The Netlify plugin bundles functions for deploy. Local serve uses devApi
-    // because this environment's edge-functions Deno binary rejects --allow-scripts.
-    ...(command === "build" ? [netlify()] : []),
-  ],
+  plugins: [react(), tailwindcss(), localFunctionsPlugin()],
   resolve: {
     alias: {
       "@shared": fileURLToPath(new URL("../shared", import.meta.url)),
@@ -26,4 +18,4 @@ export default defineConfig(({ command }) => ({
     port: 41773,
     strictPort: true,
   },
-}));
+});

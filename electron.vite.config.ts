@@ -1,37 +1,15 @@
-import { defineConfig, externalizeDepsPlugin } from "electron-vite";
+import { defineConfig } from "electron-vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
 
 export default defineConfig({
-  main: {
-    plugins: [externalizeDepsPlugin()],
-    build: {
-      rollupOptions: {
-        input: { index: resolve(__dirname, "src/main/index.ts") },
-      },
-    },
-  },
-  preload: {
-    plugins: [externalizeDepsPlugin()],
-    build: {
-      rollupOptions: {
-        input: { index: resolve(__dirname, "src/main/preload.ts") },
-        output: {
-          format: "cjs",
-          entryFileNames: "index.js",
-        },
-      },
-    },
-  },
+  main: { build: { externalizeDeps: true } },
+  preload: { build: { externalizeDeps: true } },
   renderer: {
-    root: resolve(__dirname, "src/renderer"),
-    resolve: {
-      alias: {
-        "@shared": resolve(__dirname, "shared"),
-        "@renderer": resolve(__dirname, "src/renderer"),
-      },
-    },
+    root: resolve("src/renderer"),
     plugins: [react(), tailwindcss()],
+    server: { host: "127.0.0.1", port: 5173, strictPort: true },
+    build: { rollupOptions: { input: resolve("src/renderer/index.html") } },
   },
 });

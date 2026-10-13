@@ -9,7 +9,7 @@ import { appendAudit, readAudit } from "./auditLog";
 import { bundleFrom, readCaseFile, writeCaseFile, type CaseRecords } from "./caseFile";
 import { writeHashed } from "./hashStream";
 import { emptyManifest, readManifest, writeManifest } from "./manifest";
-import { replaceMessages } from "../db/index";
+import { replaceMessages } from "../db/viewer";
 
 const ID_PATTERN = /^[a-z0-9-]+$/;
 

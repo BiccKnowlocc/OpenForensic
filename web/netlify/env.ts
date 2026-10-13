@@ -1,9 +1,5 @@
 type NetlifyHost = {
-  Netlify?: {
-    env?: {
-      get: (name: string) => string | undefined;
-    };
-  };
+  Netlify?: { env?: { get: (name: string) => string | undefined } };
 };
 
 export function readEnv(name: string): string | undefined {

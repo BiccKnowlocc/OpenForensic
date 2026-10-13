@@ -3,7 +3,7 @@ import type { Config, Context } from "@netlify/functions";
 import { MongoClient } from "mongodb";
 import sample from "../../../shared/sample-case.json";
 import type { CaseBundle, CaseSummary } from "../../../shared/types";
-import { readEnv } from "./netlify-env";
+import { readEnv } from "../env";
 
 const sampleBundle = sample as CaseBundle;
 

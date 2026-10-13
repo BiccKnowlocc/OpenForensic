@@ -1,51 +1,118 @@
 {
   "name": "openforensic",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "private": true,
-  "type": "module",
-  "main": "./out/main/index.js",
-  "description": "Authorized Android logical acquisition workstation and web case viewer.",
+  "description": "Local Android forensic acquisition and evidence triage workstation",
+  "license": "Apache-2.0",
+  "main": "out/main/index.js",
+  "author": "OpenForensic contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BiccKnowlocc/OpenForensic.git"
+  },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   },
   "scripts": {
     "dev": "electron-vite dev",
+    "build": "npm run typecheck && electron-vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:python": "python -m unittest discover -s tests/python -v",
+    "test:integration": "node scripts/run-integration.mjs",
+    "test:desktop": "npm run build && node scripts/desktop-smoke.mjs",
+    "rebuild": "electron-builder install-app-deps",
+    "postinstall": "electron-builder install-app-deps",
+    "package": "npm run build && node scripts/package.mjs --dir",
+    "dist": "npm run build && node scripts/package.mjs",
     "dev:web": "vite --config web/vite.config.ts",
-    "build": "electron-vite build",
-    "build:web": "vite build --config web/vite.config.ts",
+    "build:web": "tsc --noEmit -p web/tsconfig.json && vite build --config web/vite.config.ts",
     "sample": "tsx scripts/write-sample.ts",
-    "test": "tsx --test shared/*.test.ts src/engine/*.test.ts src/db/*.test.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p web/tsconfig.json"
+    "test:viewer": "node scripts/run-viewer-tests.mjs",
+    "build:viewer-desktop": "electron-vite build --config electron.viewer.config.ts",
+    "dev:viewer-desktop": "npm run build:viewer-desktop && node scripts/run-viewer-desktop.mjs",
+    "test:viewer-ui": "node scripts/viewer-smoke.mjs"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
+    "@devicefarmer/adbkit": "3.3.9",
+    "better-sqlite3": "13.0.3",
+    "lucide-react": "^0.577.0",
     "mongodb": "^6.20.0",
-    "openai": "^4.104.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.2"
+    "openai": "7.32.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "^7.6.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@netlify/functions": "^4.2.5",
-    "@netlify/vite-plugin": "^3.0.1",
+    "@netlify/functions": "6.0.2",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.12",
-    "@tailwindcss/vite": "^4.1.8",
-    "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^22.15.21",
-    "@types/react": "^19.1.6",
-    "@types/react-dom": "^19.1.5",
-    "@vitejs/plugin-react": "^4.5.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "5.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "electron": "^36.3.2",
-    "electron-vite": "^5.0.0",
-    "lucide-react": "^0.513.0",
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "5.0.0",
+    "esbuild": "0.28.2",
+    "playwright": "1.64.0",
+    "prettier": "^3.9.10",
     "tailwind-merge": "^3.3.0",
-    "tailwindcss": "^4.1.8",
+    "tailwindcss": "4.3.3",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "typescript": "^5.9.3",
+    "vite": "7.3.7",
+    "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "global-agent": "4.1.3"
+  },
+  "build": {
+    "electronDist": "node_modules/electron/dist",
+    "directories": {
+      "output": "release"
+    },
+    "appId": "org.openforensic.desktop",
+    "productName": "OpenForensic",
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "files": [
+      "out/**/*",
+      "package.json",
+      "LICENSE",
+      "NOTICE",
+      "SECURITY.md",
+      "README.md"
+    ],
+    "extraResources": [
+      {
+        "from": "src/engine",
+        "to": "engine",
+        "filter": [
+          "**/*.py"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility",
+      "icon": "build/icon.png"
+    }
   }
 }

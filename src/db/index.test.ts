@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import sample from "../../shared/sample-case.json";
 import type { CaseBundle } from "../../shared/types";
-import { replaceMessages, searchMessages } from "./index";
+import { replaceMessages, searchMessages } from "./viewer";
 
 test("case_store.db FTS5 finds the sedan message", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "of-db-"));

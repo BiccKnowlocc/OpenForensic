@@ -2,7 +2,7 @@ import type { Config, Context } from "@netlify/functions";
 import OpenAI from "openai";
 import { localReview } from "../../../shared/aiReview";
 import type { CaseBundle, ReviewRequest, ReviewResponse } from "../../../shared/types";
-import { readEnv } from "./netlify-env";
+import { readEnv } from "../env";
 
 const MODEL = "gpt-4o-mini";
 

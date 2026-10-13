@@ -1,10 +1,13 @@
 # Scope questions
 
-Locked 2026-10-11.
+The current build follows the supplied Electron/Android/local-SQLite scope and remains under BiccKnowlocc/OpenForensic. These questions now track deployment and validation decisions; they did not block scaffolding.
 
-1. Examiner computer: Windows, macOS, and Linux.
-2. Test phone: Android, USB debugging on, not rooted. v1 acquisition is logical only.
-3. GitHub: https://github.com/BiccKnowlocc/OpenForensic
-4. Netlify: web case viewer in v1.
-5. Database: local case folder and `case_store.db` on the examiner machine. The viewer and review also read MongoDB Atlas project OpenForensic, cluster OpenForensic.
-6. v1: SMS, calls, contacts, shared media, hashes, timeline, and chat view. Yes. Review of records already in the case is included. A confirmed free-space wipe is a separate action on an authorized phone or tablet.
+1. Which examiner OS versions must be supported for the validated release? Windows is the local development/test platform; macOS/Linux configuration is supplied.
+2. Which authorized stock and existing-root test phones/tablets are available for reference acquisitions?
+3. Which independent examiner will assess recovery false positives, parser coverage, and custody procedures?
+4. If a documentation site is requested later, which host should serve it? Evidence and USB acquisition currently remain local.
+5. Which release signing and externally preserved seal/checkpoint process should be used?
+6. Which local Ollama model and hardware should be used for AI validation?
+
+
+The merged web/case-bundle viewer and its original decisions are retained separately under `web/`, `shared/`, and `docs/viewer-*.md`. The default native workstation retains its verified acquisition, local-only AI, parser, and guarded sanitization services.
